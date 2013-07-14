@@ -540,7 +540,15 @@
       TaskStatus status = ts[i];
       String taskTrackerName = status.getTaskTracker();
       TaskTrackerStatus taskTracker = tracker.getTaskTrackerStatus(taskTrackerName);
-      out.print("<tr><td>" + status.getTaskID() + "</td>");
+      
+      //modified by Lijie Xu
+      //out.print("<tr><td>" + status.getTaskID() + "</td>");
+  
+      String taskPerfUrl = "http://" + taskTracker.getHost() + ":"
+              + taskTracker.getHttpPort() + "/taskPerf.jsp?jobid=" + jobid + "&taskid=" + status.getTaskID();
+      out.print("<tr><td><a href=\"" + taskPerfUrl + "\">" + status.getTaskID() + "</a></td>");
+      //modifed end
+      
       String taskAttemptTracker = null;
       String cleanupTrackerName = null;
       TaskTrackerStatus cleanupTracker = null;

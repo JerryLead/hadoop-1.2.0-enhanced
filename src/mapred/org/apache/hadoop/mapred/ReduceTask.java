@@ -396,6 +396,9 @@ class ReduceTask extends Task {
     statusUpdate(umbilical);
 
     final FileSystem rfs = FileSystem.getLocal(job).getRaw();
+    
+  //modified by LijieXu modify spilledRecordsCounter from readsCounter to writesCounter
+    /*
     RawKeyValueIterator rIter = isLocal
       ? Merger.merge(job, rfs, job.getMapOutputKeyClass(),
           job.getMapOutputValueClass(), codec, getMapFiles(rfs, true),
@@ -403,7 +406,16 @@ class ReduceTask extends Task {
           new Path(getTaskID().toString()), job.getOutputKeyComparator(),
           reporter, spilledRecordsCounter, null)
       : reduceCopier.createKVIterator(job, rfs, reporter);
-        
+    */
+    RawKeyValueIterator rIter = isLocal //在sort阶段竟然没有combine！！！
+  	      ? Merger.merge(job, rfs, job.getMapOutputKeyClass(),
+  	          job.getMapOutputValueClass(), codec, getMapFiles(rfs, true),
+  	          !conf.getKeepFailedTaskFiles(), job.getInt("io.sort.factor", 100),
+  	          new Path(getTaskID().toString()), job.getOutputKeyComparator(),
+  	          reporter, null, spilledRecordsCounter)
+  	      : reduceCopier.createKVIterator(job, rfs, reporter); //createKVIterator触动将内存中的小根堆的Segments输出到硬盘上map_i.out
+  	//modified end
+  	      
     // free up the data structures
     mapOutputFilesOnDisk.clear();
     
@@ -2467,11 +2479,22 @@ class ReduceTask extends Task {
           // must spill to disk, but can't retain in-mem for intermediate merge
           final Path outputPath =
               mapOutputFile.getInputFileForWrite(mapId, inMemToDiskBytes);
+          
+          //modified by LijieXu modify spilledRecordsCounter from readsCounter to writesCounter
           final RawKeyValueIterator rIter = Merger.merge(job, fs,
               keyClass, valueClass, memDiskSegments, numMemDiskSegments,
-              tmpDir, comparator, reporter, spilledRecordsCounter, null);
+              tmpDir, comparator, reporter, null, spilledRecordsCounter);
+          //modified end
+          
+          //modified by LijieXu
+          long currentSpillRecords = spilledRecordsCounter.getCounter();
+          
+          //Writer writer = new Writer(job, fs, outputPath,
+          //        keyClass, valueClass, codec, null);
           Writer writer = new Writer(job, fs, outputPath,
-              keyClass, valueClass, codec, null);
+                keyClass, valueClass, codec, spilledRecordsCounter);
+          //modified end
+          
           try {
             Merger.writeFile(rIter, writer, reporter, job);
             writer.close();
@@ -2491,9 +2514,23 @@ class ReduceTask extends Task {
               writer.close();
             }
           }
-          LOG.info("Merged " + numMemDiskSegments + " segments, " +
-                   inMemToDiskBytes + " bytes to disk to satisfy " +
+        //added by LijieXu
+          long totalRecordsBeforeCombine = spilledRecordsCounter.getCounter() - currentSpillRecords;
+          LOG.info("[InMemorySortMerge]<SegmentsNum = " + numMemDiskSegments + ", "
+      		  		+ "Records = " +  totalRecordsBeforeCombine + ", "
+		  			+ "BytesBeforeMerge = " + inMemToDiskBytes + ", "
+		  			+ "RawLength = " + writer.getRawLength() + ", "
+		  			+ "CompressedLength = " + writer.getCompressedLength() + ">");
+      
+          //added end
+          //modified by LijieXu
+          /*
+          LOG.info("Merged " + numMemDiskSegments + " segments, " + //3
+                   inMemToDiskBytes + " bytes to disk to satisfy " + //11,391,807
                    "reduce memory limit");
+           */
+          //modified end
+         
           inMemToDiskBytes = 0;
           memDiskSegments.clear();
         } else if (inMemToDiskBytes != 0) {
@@ -2516,8 +2553,12 @@ class ReduceTask extends Task {
         totalDecompressedBytes += (filestatus.getDecompressedSize() > 0) ? filestatus
             .getDecompressedSize() : len;
       }
+      
+      
+    //modified by LijieXu
       LOG.info("Merging " + mapOutputFilesOnDisk.size() + " files, " +
                onDiskBytes + " bytes from disk");
+    //modified end
       Collections.sort(diskSegments, new Comparator<Segment<K,V>>() {
         public int compare(Segment<K, V> o1, Segment<K, V> o2) {
           if (o1.getLength() == o2.getLength()) {
@@ -2530,26 +2571,52 @@ class ReduceTask extends Task {
       // build final list of segments from merged backed by disk + in-mem
       List<Segment<K,V>> finalSegments = new ArrayList<Segment<K,V>>();
       long inMemBytes = createInMemorySegments(finalSegments, 0);
-      LOG.info("Merging " + finalSegments.size() + " segments, " +
-               inMemBytes + " bytes from memory into reduce");
+      //modified by LijieXu
+      //LOG.info("Merging " + finalSegments.size() + " segments, " +
+      //         inMemBytes + " bytes from memory into reduce");
+      int inMemSegmentsNum = finalSegments.size();
+      //modified end
+      
       if (0 != onDiskBytes) {
         final int numInMemSegments = memDiskSegments.size();
         diskSegments.addAll(0, memDiskSegments);
         memDiskSegments.clear();
-        RawKeyValueIterator diskMerge = Merger.merge(
+        
+      //modified by LijieXu modify spilledRecordsCounter from readsCounter to writesCounter
+        RawKeyValueIterator diskMerge = Merger.merge( 
             job, fs, keyClass, valueClass, codec, diskSegments,
             ioSortFactor, numInMemSegments, tmpDir, comparator,
-            reporter, false, spilledRecordsCounter, null);
+            reporter, false, null, spilledRecordsCounter);
+        //modified end
+        
         diskSegments.clear();
+        
+      //added by LijieXu
+        LOG.info("[MixSortMerge][CountersBeforeMerge]" + "<InMemorySegmentsNum = " + numInMemSegments + ", "
+      		  	+ "InMemorySegmentsSize = " + inMemToDiskBytes + ", "
+      		  	+ "OnDiskSegmentsNum = " + mapOutputFilesOnDisk.size() + ", "
+      		  	+ "OnDiskSegmentsSize = " + (onDiskBytes - inMemToDiskBytes) + ">");
+        //added end
+        
+        
         if (0 == finalSegments.size()) {
           return diskMerge;
         }
         finalSegments.add(new Segment<K,V>(
               new RawKVIteratorReader(diskMerge, onDiskBytes), true, totalDecompressedBytes));
       }
-      return Merger.merge(job, fs, keyClass, valueClass,
+      
+      //added by LijieXu
+      LOG.info("[FinalSortMerge]" + "<InMemorySegmentsNum = " + inMemSegmentsNum + ", "
+    		  	+ "InMemorySegmentsSize = " + inMemBytes + ">");
+      //added end
+      
+    //modified by LijieXu modify spilledRecordsCounter form readsCounter to writesCounter
+      return Merger.merge(job, fs, keyClass, valueClass, //最后merge（mapOutputsFilesInMemory中的和in-memory/On-disk合并后的segments）
                    finalSegments, finalSegments.size(), tmpDir,
-                   comparator, reporter, spilledRecordsCounter, null);
+                   comparator, reporter, null, spilledRecordsCounter);
+      //modified end
+      
     }
 
     class RawKVIteratorReader extends IFile.Reader<K,V> {
@@ -2558,7 +2625,10 @@ class ReduceTask extends Task {
 
       public RawKVIteratorReader(RawKeyValueIterator kvIter, long size)
           throws IOException {
-        super(null, null, size, null, spilledRecordsCounter);
+    	//modified by LijieXu remove spilledRecordsCounter from readCounters
+        super(null, null, size, null, null);//spilledRecordsCounter);
+        //modified end
+        //super(null, null, size, null, spilledRecordsCounter);
         this.kvIter = kvIter;
       }
 
@@ -2691,26 +2761,56 @@ class ReduceTask extends Task {
               lDirAlloc.getLocalPathForWrite(mapFiles.get(0).toString(), 
                                              approxOutputSize, conf)
               .suffix(".merged");
+            
+            //modified by LijieXu
+            /*
             Writer writer = 
               new Writer(conf,rfs, outputPath, 
                          conf.getMapOutputKeyClass(), 
                          conf.getMapOutputValueClass(),
                          codec, null);
+            */
+            Writer writer = 
+                    new Writer(conf,rfs, outputPath, 
+                               conf.getMapOutputKeyClass(), 
+                               conf.getMapOutputValueClass(),
+                               codec, spilledRecordsCounter);
+            //modified end
+            
+           
             RawKeyValueIterator iter  = null;
             Path tmpDir = new Path(reduceTask.getTaskID().toString());
             long decompressedBytesWritten;
             try {
+              //modified by LijieXu modify spilledRecordsCounter from readsCounter to writesCounter
               iter = Merger.merge(conf, rfs,
-                                  conf.getMapOutputKeyClass(),
-                                  conf.getMapOutputValueClass(),
-                                  codec, mapFiles.toArray(new Path[mapFiles.size()]), 
-                                  true, ioSortFactor, tmpDir, 
-                                  conf.getOutputKeyComparator(), reporter,
-                                  spilledRecordsCounter, null);
-              
+                                    conf.getMapOutputKeyClass(),
+                                    conf.getMapOutputValueClass(),
+                                    codec, mapFiles.toArray(new Path[mapFiles.size()]), 
+                                    true, ioSortFactor, tmpDir, 
+                                    conf.getOutputKeyComparator(), reporter,
+                                    null, spilledRecordsCounter);
+              //modified end
+                
+              //added by LijieXu
+              long currentSpillRecords = spilledRecordsCounter.getCounter();
+              //added end
+                
+
               Merger.writeFile(iter, writer, reporter, conf);
               writer.close();
               decompressedBytesWritten = writer.decompressedBytesWritten;
+              
+              //added by LijieXu
+              long totalRecordsBeforeCombine = spilledRecordsCounter.getCounter() - currentSpillRecords;
+              LOG.info("[OnDiskShuffleMerge]<SegmentsNum = " + mapFiles.size() + ", "
+          		  	+ "Records = " +  totalRecordsBeforeCombine + ", "
+  		  			+ "BytesBeforeMerge = " + approxOutputSize + ", "
+  		  			+ "RawLength = " + writer.getRawLength() + ", "
+  		  			+ "CompressedLength = " + writer.getCompressedLength() + ">");
+          
+              //added end
+              
             } catch (Exception e) {
               localFileSys.delete(outputPath, true);
               throw new IOException (StringUtils.stringifyException(e));
@@ -2722,13 +2822,16 @@ class ReduceTask extends Task {
                   fileStatus, decompressedBytesWritten);
               addToMapOutputFilesOnDisk(compressedFileStatus);
             }
-            
+            //modified by LijieXu
+            /*
             LOG.info(reduceTask.getTaskID() +
                      " Finished merging " + mapFiles.size() + 
                      " map output files on disk of total-size " + 
                      approxOutputSize + "." + 
                      " Local output file is " + outputPath + " of size " +
                      localFileSys.getFileStatus(outputPath).getLen());
+            */
+            //modified end
             }
         } catch (Exception e) {
           LOG.warn(reduceTask.getTaskID()
@@ -2797,25 +2900,44 @@ class ReduceTask extends Task {
 
         Path outputPath =
             mapOutputFile.getInputFileForWrite(mapId, mergeOutputSize);
-
+        
+        //modified by LijieXu 
+        /*
         Writer writer = 
           new Writer(conf, rfs, outputPath,
                      conf.getMapOutputKeyClass(),
                      conf.getMapOutputValueClass(),
                      codec, null);
+        */
+        Writer writer = 
+                new Writer(conf, rfs, outputPath,
+                           conf.getMapOutputKeyClass(),
+                           conf.getMapOutputValueClass(),
+                           codec, spilledRecordsCounter);
+        
+        //modified end
+        
         long decompressedBytesWritten;
         RawKeyValueIterator rIter = null;
         try {
           LOG.info("Initiating in-memory merge with " + noInMemorySegments + 
                    " segments...");
           
-          rIter = Merger.merge(conf, rfs,
+        //modified by LijieXu modify spilledRecordsCounter from readsCounter to writesCounter
+          rIter = Merger.merge(conf, rfs, //还会重用小根堆的merge方法
                                (Class<K>)conf.getMapOutputKeyClass(),
                                (Class<V>)conf.getMapOutputValueClass(),
                                inMemorySegments, inMemorySegments.size(),
                                new Path(reduceTask.getTaskID().toString()),
                                conf.getOutputKeyComparator(), reporter,
-                               spilledRecordsCounter, null);
+                               null, spilledRecordsCounter);
+          //modified end
+         
+          //added by LijieXu
+          long currentSpillRecords = spilledRecordsCounter.getCounter();
+          long currentCombineInputRecords = reporter.getCounter(Task.Counter.COMBINE_INPUT_RECORDS).getCounter();
+          long currentCombineRecords = reduceCombineOutputCounter.getCounter();
+          //added end
           
           if (combinerRunner == null) {
             Merger.writeFile(rIter, writer, reporter, conf);
@@ -2825,12 +2947,34 @@ class ReduceTask extends Task {
           }
           writer.close();
           decompressedBytesWritten = writer.decompressedBytesWritten;
-
+          
+        //added by LijieXu
+          long totalRecordsBeforeCombine = spilledRecordsCounter.getCounter() - currentSpillRecords;
+          long totalRecordsAfterCombine = spilledRecordsCounter.getCounter() - currentSpillRecords;
+          
+          if (combinerRunner != null) {
+        	  totalRecordsBeforeCombine = reporter.getCounter(Task.Counter.COMBINE_INPUT_RECORDS).getCounter() - currentCombineInputRecords;
+        	  totalRecordsAfterCombine = reduceCombineOutputCounter.getCounter() - currentCombineRecords;
+          }
+         //added end
+          
+          //modified by LijieXu
+          /*
           LOG.info(reduceTask.getTaskID() + 
               " Merge of the " + noInMemorySegments +
               " files in-memory complete." +
               " Local file is " + outputPath + " of size " + 
-              localFileSys.getFileStatus(outputPath).getLen());
+              localFileSys.getFileStatus(outputPath).getLen()); 
+          */
+          LOG.info("[InMemoryShuffleMerge]<SegmentsNum = " + noInMemorySegments + ", "
+        		  	+ "RecordsBeforeMergeAC = " +  totalRecordsBeforeCombine + ", "
+		  			+ "BytesBeforeMergeAC = " + mergeOutputSize + ", "
+		  			+ "RecordsAfterCombine = " + totalRecordsAfterCombine + ", "
+		  			+ "RawLength = " + writer.getRawLength() + ", "
+		  			+ "CompressedLength = " + writer.getCompressedLength() + ">");
+        
+          //modified end
+ 
         } catch (Exception e) { 
           //make sure that we delete the ondisk file that we created 
           //earlier when we invoked cloneFileAttributes

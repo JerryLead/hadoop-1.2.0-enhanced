@@ -1613,6 +1613,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
 
     server.addInternalServlet("mapOutput", "/mapOutput", MapOutputServlet.class);
     server.addServlet("taskLog", "/tasklog", TaskLogServlet.class);
+    
+  //added by LijieXu
+    server.addServlet("taskPerfGraph", "/taskPerfGraph", TaskPerfGraphServlet.class);
+    //added end
+    
     server.start();
     this.httpPort = server.getPort();
     checkJettyPort(httpPort);

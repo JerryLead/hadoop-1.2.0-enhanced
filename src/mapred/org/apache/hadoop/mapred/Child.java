@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
@@ -62,6 +65,11 @@ class Child {
   static volatile boolean isCleanup;
   static String cwd;
 
+//added by LijieXu
+  private static String memMetrics = System.getProperty("hadoop.log.dir") 
+		  + File.separator + "memMetrics";;
+//added end
+  
   static boolean logIsSegmented(JobConf job) {
     return (job.getNumTasksToExecutePerJvm() != 1);
   }
@@ -152,8 +160,9 @@ class Child {
     t.setName("Thread for syncLogs");
     t.setDaemon(true);
     t.start();
-    
+
     String pid = "";
+
     if (!Shell.WINDOWS) {
       pid = System.getenv().get("JVM_PID");
     }
@@ -233,10 +242,157 @@ class Child {
         assert(numTasksToExecute != 0);
 
         task.setConf(job);
+     
+// added by LijieXu
+// to monitor the real-time utilization of CPU/Memory/Disk IO  
+        final File memMetricsDir = new File(memMetrics, task.getJobID().toString());	
+        
+        final String jvmPID = pid;
+        Thread pidStat = null;
+        final int interval = job.getInt("child.monitor.pidstat.seconds", 0);
+        
+        if(task.isMapOrReduce() && interval != 0) {
+        	
+             if(!memMetricsDir.exists())
+            	 memMetricsDir.mkdirs();
+             
+             pidStat = new Thread() {
+            	
+            	private String shellcommand = "exec '/usr/bin/pidstat' -dru -p " + jvmPID 
+        				+ " -h " + interval + " > " + memMetricsDir.getAbsolutePath()
+        				+ File.separator + taskid + ".pidstat";
+        		@Override
+        		public void run() {	
+            			Process p = null;
+            			try {
+            				p = new ProcessBuilder("bash", "-c", shellcommand).start();
+            				
+            				int exitCode = p.waitFor();
+            				
+            			} catch (IOException e) {
+            				 LOG.error("Cannot create pidstat process", e);
+            			} catch (InterruptedException e) {
+            				// TODO Auto-generated catch block
+            				//e.printStackTrace();
+            			} finally {
+            				p.destroy();
+            			}      		
+        		}
+        			
+        	 };
+        	 pidStat.start();
+        	
+        }
+        
+        Thread jvmStat = null;
+        final int jvmInterval = job.getInt("child.monitor.jstat.seconds", 0);
+        
+    	if(task.isMapOrReduce() && jvmInterval != 0 ) {
 
+             if(!memMetricsDir.exists())
+             	 memMetricsDir.mkdirs();			
+             
+             jvmStat = new Thread() {
+            	 
+				 private String jvmPath = memMetricsDir.getAbsolutePath() + File.separator 
+						 + taskid + ".memory";
+				 private BufferedWriter writer = null;
+
+				 @Override
+				 public void run() {
+					 try {
+						 writer = new BufferedWriter(new java.io.FileWriter(jvmPath));
+						 Runtime rt = Runtime.getRuntime();
+						 writer.write("Time\tJVMUsed\tTotal\tMax\n");
+
+						 while(!isInterrupted()) {
+							 writer.write(System.currentTimeMillis() / 1000 + "\t");
+							 writer.write((rt.totalMemory() - rt.freeMemory())/1024/1024 + "\t"
+									 + rt.totalMemory()/1024/1024 + "\t"
+									 + rt.maxMemory()/1024/1024 + "\n");
+							 Thread.sleep(jvmInterval * 1000);
+						 }
+
+					 } catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						//e.printStackTrace();
+						try {
+							writer.close();
+						} catch (IOException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+						return;
+					 } catch (IOException e) {
+						 LOG.error("Cannot create jvm metrics file: " + jvmPath, e);
+
+						 try {
+							writer.close();
+						} catch (IOException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+						e.printStackTrace();
+						return;
+
+					 } 
+				 }
+
+             };
+             jvmStat.start();	
+		}
+
+
+    	Thread jstat = null;
+    	final int jstatInterval = job.getInt("child.monitor.jstat.seconds", 0);
+    	
+        if(task.isMapOrReduce() && jstatInterval != 0) {
+        		
+            if(!memMetricsDir.exists())
+             	 memMetricsDir.mkdirs();			
+
+            jstat = new Thread() {
+            	
+            	private String output = memMetricsDir.getAbsolutePath()+ File.separator + taskid + ".jstat";
+            	private String date = "exec date +%s >> " + output;
+            	private String gccapacity = "exec $JAVA_HOME/bin/jstat -gccapacity " + jvmPID + " > " + output;
+            	private String gc = "exec $JAVA_HOME/bin/jstat -gc -t " + jvmPID + " " + interval + "s >> " + output;
+   			
+            	
+        		@Override
+        		public void run() {	
+            			Process p = null;
+            			try {	
+            				p = new ProcessBuilder("bash", "-c", gccapacity).start();
+       					p.waitFor();
+       					
+       					p = new ProcessBuilder("bash", "-c", date).start();
+       					p.waitFor();
+       				
+       					p = new ProcessBuilder("bash", "-c", gc).start();
+            				
+            				int exitCode = p.waitFor();
+            				
+            			} catch (IOException e) {
+            				LOG.error("Error in jstat process", e);
+            			} catch (InterruptedException e) {
+            				// TODO Auto-generated catch block
+            				//e.printStackTrace();
+            			} finally {
+            				p.destroy();
+            			}      		
+        		}
+        			
+        	 };
+        	 jstat.start();
+        	
+        }
+    	//added end
+         
         // Initiate Java VM metrics
-        initMetrics(prefix, jvmId.toString(), job.getSessionId());
-
+//delete Hadoop's monitor, modified by Lijie Xu
+        //initMetrics(prefix, jvmId.toString(), job.getSessionId());
+//added end
         LOG.debug("Creating remote user to execute task: " + job.get("user.name"));
         childUGI = UserGroupInformation.createRemoteUser(job.get("user.name"));
         // Add tokens to new user so that it may execute its task correctly.
@@ -265,6 +421,17 @@ class Child {
             return null;
           }
         });
+        
+      //added by Lijie Xu
+       
+        if(pidStat != null)
+        	pidStat.interrupt();
+        if(jvmStat != null)
+        	jvmStat.interrupt();
+        if(jstat != null)
+        	jstat.interrupt();
+      //added end
+        
         if (numTasksToExecute > 0 && ++numTasksExecuted == numTasksToExecute) {
           break;
         }

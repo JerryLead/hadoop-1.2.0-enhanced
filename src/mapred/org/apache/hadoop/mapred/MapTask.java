@@ -1300,7 +1300,15 @@ class MapTask extends Task {
         if (kvend != kvindex) {
           kvend = kvindex;
           bufend = bufmark;
-          sortAndSpill();
+          
+        //added by LijieXu
+          LOG.info("bufstart = " + bufstart + "; bufend = " + bufmark +
+                  "; bufvoid = " + bufvoid);
+          LOG.info("kvstart = " + kvstart + "; kvend = " + kvindex +
+                  "; length = " + kvoffsets.length);
+          //added end
+          
+          sortAndSpill(true);
         }
       } catch (InterruptedException e) {
         throw (IOException)new IOException(
@@ -1346,7 +1354,7 @@ class MapTask extends Task {
             }
             try {
               spillLock.unlock();
-              sortAndSpill();
+              sortAndSpill(false);
             } catch (Exception e) {
               sortSpillException = e;
             } catch (Throwable t) {
@@ -1381,8 +1389,9 @@ class MapTask extends Task {
       bufend = bufmark;
       spillReady.signal();
     }
-
-    private void sortAndSpill() throws IOException, ClassNotFoundException,
+    
+  //add (boolean isFlush) to this method, so partition infos can be displayed when no merging occurs
+    private void sortAndSpill(boolean isFlush) throws IOException, ClassNotFoundException,
                                        InterruptedException {
       //approximate the length of the output file to be the length of the
       //buffer + header lengths for the partitions
@@ -1405,7 +1414,25 @@ class MapTask extends Task {
         int spindex = kvstart;
         IndexRecord rec = new IndexRecord();
         InMemValBytes value = new InMemValBytes();
+        
+      //added by LijieXu
+        long rawLengthOneSpill = 0;
+        long compressedLengthOneSpill = 0;
+        long currentCombineCounter = combineOutputCounter.getCounter();
+        //added end
+        
         for (int i = 0; i < partitions; ++i) {
+        	
+        //added by LijieXu
+          long flush_rawLength = 0;
+          long flush_compressedLength = 0;
+          long flush_CombineCounter = 0;
+          long flush_records = spindex;
+            
+          if(isFlush && numSpills == 0)
+          	flush_CombineCounter = combineOutputCounter.getCounter();
+        //added end
+            
           IFile.Writer<K, V> writer = null;
           try {
             long segmentStart = out.getPos();
@@ -1452,6 +1479,39 @@ class MapTask extends Task {
             spillRec.putIndex(rec, i);
 
             writer = null;
+            
+          //added by LijieXu
+            if(isFlush && numSpills == 0) {
+            	long RecordsBeforeCombine = spindex - flush_records;
+            	//long RawLengthBeforeMerge = rec.rawLength;
+            	long RecordsAfterCombine; 
+            	if(combinerRunner == null)
+            		RecordsAfterCombine = RecordsBeforeCombine;
+            	else {
+            		//RawLengthBeforeMerge = size / partitions;
+            		RecordsAfterCombine = combineOutputCounter.getCounter() - flush_CombineCounter;
+            	}
+            		
+            	/*
+            	LOG.info("[PartInfos][Partition " + i + "]<RecordsBeforeCombine = " 
+    		  			+ RecordsBeforeCombine + ", "
+    		  			+ "RawLengthBeforeMerge = " + RawLengthBeforeMerge + ", "
+    		  			+ "RecordsAfterCombine = " + RecordsAfterCombine + ", "
+    		  			+ "RawLength = " + rec.rawLength + ", "
+    		  			+ "CompressedLength = " + rec.partLength + ">");
+    		  	*/
+            	LOG.info("[PartInfos][Partition " + i + "]<RecordsBeforeCombine = " 
+    		  			+ RecordsAfterCombine + ", "
+    		  			+ "RawLengthBeforeMerge = " + rec.rawLength + ", "
+    		  			+ "RecordsAfterCombine = " + RecordsAfterCombine + ", "
+    		  			+ "RawLength = " + rec.rawLength + ", "
+    		  			+ "CompressedLength = " + rec.partLength + ">");
+            }
+           
+            rawLengthOneSpill += rec.rawLength;
+            compressedLengthOneSpill += rec.partLength;     
+            //added end
+            
           } finally {
             if (null != writer) writer.close();
           }
@@ -1468,7 +1528,20 @@ class MapTask extends Task {
           totalIndexCacheMemory +=
             spillRec.size() * MAP_OUTPUT_INDEX_RECORD_LENGTH;
         }
-        LOG.info("Finished spill " + numSpills);
+        //LOG.info("Finished spill " + numSpills);
+        
+        //added by LijieXu 
+        if(combinerRunner == null)
+        	LOG.info("Finished spill " + numSpills + " without combine <Records = " + (spindex - kvstart) + ", " 
+        			+ "BytesBeforeSpill = " + (size - partitions * APPROX_HEADER_LENGTH) + ", "
+        			+ "RawLength = " + rawLengthOneSpill + ", CompressedLength = " + compressedLengthOneSpill + ">");
+        else
+        	LOG.info("Finished spill " + numSpills + " <RecordsBeforeCombine = " + (spindex - kvstart) + ", "
+        			+ "BytesBeforeSpill = " + (size - partitions * APPROX_HEADER_LENGTH) + ", "
+        			+ "RecordAfterCombine = " + (combineOutputCounter.getValue() - currentCombineCounter) + ", " 
+        			+ "RawLength = " + rawLengthOneSpill + ", CompressedLength = " + compressedLengthOneSpill + ">");
+        //added end
+        
         ++numSpills;
       } finally {
         if (out != null) out.close();
@@ -1678,6 +1751,12 @@ class MapTask extends Task {
           //create the segments to be merged
           List<Segment<K,V>> segmentList =
             new ArrayList<Segment<K, V>>(numSpills);
+          
+          //added by LijieXu
+          long rawLength = 0;
+          long compressedLength = 0;
+          //added end
+          
           for(int i = 0; i < numSpills; i++) {
             IndexRecord indexRecord = indexCacheList.get(i).getIndex(parts);
 
@@ -1685,7 +1764,12 @@ class MapTask extends Task {
               new Segment<K,V>(job, rfs, filename[i], indexRecord.startOffset,
                                indexRecord.partLength, codec, true);
             segmentList.add(i, s);
-
+            
+            //added by LijieXu
+            rawLength += indexRecord.rawLength;
+            compressedLength += indexRecord.partLength;
+            //added end
+            
             if (LOG.isDebugEnabled()) {
               LOG.debug("MapId=" + mapId + " Reducer=" + parts +
                   "Spill =" + i + "(" + indexRecord.startOffset + "," +
@@ -1693,6 +1777,10 @@ class MapTask extends Task {
             }
           }
 
+          //added by LijieXu
+          LOG.info("[BeforeMerge][Partition " + parts+ "]" + "<SegmentsNum = " + segmentList.size() + ", RawLength = " + rawLength + ", CompressedLength = " + compressedLength + ">");
+          //added end
+          
           //merge
           @SuppressWarnings("unchecked")
           RawKeyValueIterator kvIter = Merger.merge(job, rfs,
@@ -1704,6 +1792,13 @@ class MapTask extends Task {
 
           //write merged output to disk
           long segmentStart = finalOut.getPos();
+          
+          //added by LijieXu
+          long currentSpillRecords = spilledRecordsCounter.getCounter();
+          long currentCombineInputRecords = reporter.getCounter(COMBINE_INPUT_RECORDS).getCounter();
+          long currentCombineRecords = combineOutputCounter.getCounter();
+          //added end
+          
           Writer<K, V> writer =
               new Writer<K, V>(job, finalOut, keyClass, valClass, codec,
                                spilledRecordsCounter);
@@ -1717,11 +1812,30 @@ class MapTask extends Task {
           //close
           writer.close();
 
+          //added by LijieXu
+          long totalRecordsBeforeCombine = spilledRecordsCounter.getCounter() - currentSpillRecords;
+          long totalRecordsAfterCombine = spilledRecordsCounter.getCounter() - currentSpillRecords;
+          
+          if (combinerRunner != null && numSpills >= minSpillsForCombine) {
+        	  totalRecordsBeforeCombine = reporter.getCounter(COMBINE_INPUT_RECORDS).getCounter() - currentCombineInputRecords;
+        	  totalRecordsAfterCombine = combineOutputCounter.getCounter() - currentCombineRecords;
+          }
+          //added end
+          
           // record offsets
           rec.startOffset = segmentStart;
           rec.rawLength = writer.getRawLength();
           rec.partLength = writer.getCompressedLength();
           spillRec.putIndex(rec, parts);
+          
+          //added by LijieXu
+          LOG.info("[AfterMergeAndCombine][Partition " + parts + "]<RecordsBeforeCombine = " 
+        		  			+ totalRecordsBeforeCombine + ", "
+        		  			+ "RecordsAfterCombine = " + totalRecordsAfterCombine + ", "
+        		  			+ "RawLength = " + rec.rawLength + ", "
+        		  			+ "CompressedLength = " + rec.partLength + ">");
+          //added end
+          
         }
         spillRec.writeToFile(finalIndexFile, job);
         finalOut.close();

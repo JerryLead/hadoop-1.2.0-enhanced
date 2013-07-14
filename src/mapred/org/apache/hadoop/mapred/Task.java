@@ -20,7 +20,9 @@ package org.apache.hadoop.mapred;
 
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.text.NumberFormat;
@@ -166,6 +168,11 @@ abstract public class Task implements Writable, Configurable {
   protected SecretKey tokenSecret;
   protected JvmContext jvmContext;
 
+  
+  //added by LijieXu
+  private PrintWriter countersWriter = null;
+  //added end
+  
   ////////////////////////////////////////////
   // Constructors
   ////////////////////////////////////////////
@@ -648,6 +655,30 @@ abstract public class Task implements Writable, Configurable {
       int remainingRetries = MAX_RETRIES;
       // get current flag value and reset it as well
       boolean sendProgress = resetProgressFlag();
+      
+//added by LijieXu
+      if(Task.this.isMapOrReduce() && 
+    		  Task.this.getConf().getBoolean("child.monitor.counters", false)) {
+    	 
+    	  String memMetrics;
+    	  String logPath = System.getProperty("hadoop.log.dir");
+    	  memMetrics = logPath + File.separator + "memMetrics";
+      
+    	  final File memMetricsDir = new File(memMetrics, Task.this.getJobID().toString());	
+    	  if(!memMetricsDir.exists())
+    		  memMetricsDir.mkdirs();
+    	  
+    	  try {
+    		  countersWriter = new PrintWriter(new java.io.BufferedWriter(
+					new java.io.FileWriter(new java.io.File(memMetricsDir, Task.this.taskId + ".counters"))));
+    		  
+    	  } catch (IOException e) {
+    		  // TODO Auto-generated catch block
+    		  e.printStackTrace();
+    	  }
+      }
+//added end
+      
       while (!taskDone.get()) {
         try {
           boolean taskFound = true; // whether TT knows about this task
@@ -679,6 +710,11 @@ abstract public class Task implements Writable, Configurable {
                                     counters);
             taskFound = umbilical.statusUpdate(taskId, taskStatus, jvmContext);
             taskStatus.clearStatus();
+            
+          //added by LijieXu
+            if(countersWriter != null)
+            	outputCounters();
+          //added end
           }
           else {
             // send ping 
@@ -689,6 +725,12 @@ abstract public class Task implements Writable, Configurable {
           // came back up), kill ourselves
           if (!taskFound) {
             LOG.warn("Parent died.  Exiting "+taskId);
+            
+            //added by LijieXu
+            if(countersWriter != null)
+            	countersWriter.close();
+            //added end
+            
             resetDoneFlag();
             System.exit(66);
           }
@@ -699,6 +741,12 @@ abstract public class Task implements Writable, Configurable {
         catch (Throwable t) {
           LOG.info("Communication exception: " + StringUtils.stringifyException(t));
           remainingRetries -=1;
+          
+        //added by LijieXu
+          if(countersWriter != null)
+          	countersWriter.close();
+          //added end
+          
           if (remainingRetries == 0) {
             ReflectionUtils.logThreadInfo(LOG, "Communication exception", 0);
             LOG.warn("Last retry, killing "+taskId);
@@ -852,6 +900,23 @@ abstract public class Task implements Writable, Configurable {
             .setValue(currentHeapUsage);
   }
 
+  //added by LijieXu
+  private void outputCounters() {
+	countersWriter.print(System.currentTimeMillis() / 1000);
+  	for (String groupName : counters.getGroupNames()) {
+          Counters.Group group = counters.getGroup(groupName);
+          
+          for (Counters.Counter counter : group) {
+            String displayCounterName = counter.getDisplayName();
+            long value = counter.getCounter();
+            countersWriter.print("," + displayCounterName + ":" + value);
+          }
+          
+  	}
+  	countersWriter.println();
+  }
+  //added end
+  
   public void done(TaskUmbilicalProtocol umbilical,
                    TaskReporter reporter
                    ) throws IOException, InterruptedException {
@@ -859,6 +924,13 @@ abstract public class Task implements Writable, Configurable {
              + " And is in the process of commiting");
     updateCounters();
 
+    //added by LijieXu
+    if(countersWriter != null) {
+    	outputCounters();
+    	countersWriter.close();
+    }
+    //added end;
+    
     boolean commitRequired = isCommitRequired();
     if (commitRequired) {
       int retries = MAX_RETRIES;

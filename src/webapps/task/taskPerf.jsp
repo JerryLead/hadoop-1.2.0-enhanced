@@ -1,90 +1,155 @@
-<%@ page
-  contentType="text/html; charset=UTF-8"
-  import="javax.servlet.*"
-  import="javax.servlet.http.*"
-  import="java.io.*"
-  import="java.util.*"
-  import="java.text.DecimalFormat"
-  import="org.apache.hadoop.mapred.*"
-  import="org.apache.hadoop.util.*"
-%>
-<%!	private static final long serialVersionUID = 1L;
-%>
+
+<%@ page contentType="text/html; charset=UTF-8" import="javax.servlet.*"
+	import="javax.servlet.http.*" import="java.io.*"
+	import="java.lang.String" import="java.text.*" import="java.util.*"
+	import="org.apache.hadoop.mapred.*" import="org.apache.hadoop.util.*"%>
+<%!private static final long serialVersionUID = 2L;%>
 <%
-  TaskTracker tracker = (TaskTracker) application.getAttribute("task.tracker");
-  String trackerName = tracker.getName();
+	//JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
+	//String trackerName = 
+	//         StringUtils.simpleHostname(tracker.getJobTrackerMachine());
+	String jobid = request.getParameter("jobid");
+	String taskid = request.getParameter("taskid");
+	//JobID jobidObj = JobID.forName(jobid);
+	//askAttemptID taskidObj = TaskAttemptID.forName(taskid);
+	String isText = request.getParameter("text");
+
+	String textHerf = "taskPerf.jsp?jobid=" + jobid + "&taskid="
+			+ taskid + "&text=true";
+	boolean isMap = taskid.contains("_m_");
 %>
 
 <html>
-
-<title><%= trackerName %> Task Tracker Status</title>
-
+<head>
+<title>Task Performance Graph of <%=taskid%></title>
+</head>
 <body>
-<h1><%= trackerName %> Task Tracker Status</h1>
-<img src="/static/hadoop-logo.jpg"/><br>
-<b>Version:</b> <%= VersionInfo.getVersion()%>,
-                r<%= VersionInfo.getRevision()%><br>
-<b>Compiled:</b> <%= VersionInfo.getDate()%> by 
-                 <%= VersionInfo.getUser()%><br>
+	<%
+	if(isText == null) {
+		if (isMap)
+			out.println("<h2>Map Task " + taskid + "</h2>");
+		else
+			out.println("<h2>Reduce Task " + taskid + "</h2>");
 
-<h2>Running tasks</h2>
-<center>
-<table border=2 cellpadding="5" cellspacing="2">
-<tr><td align="center">Task Attempts</td><td>Status</td>
-    <td>Progress</td><td>Errors</td></tr>
+		out.println("<h2>Counters Graph</h2>");
 
-  <%
-     Iterator itr = tracker.getRunningTaskStatuses().iterator();
-     while (itr.hasNext()) {
-       TaskStatus status = (TaskStatus) itr.next();
-       out.print("<tr><td>" + status.getTaskID());
-       out.print("</td><td>" + status.getRunState()); 
-       out.print("</td><td>" + 
-                 StringUtils.formatPercent(status.getProgress(), 2));
-       out.print("</td><td><pre>" + status.getDiagnosticInfo() + "</pre></td>");
-       out.print("</tr>\n");
-     }
-  %>
-</table>
-</center>
+		out.println("<p>");
+		out.println("<img src=\"/taskPerfGraph?jobid=" + jobid + "&taskid="
+				+ taskid + "&name=MRRecords\">"
+				+ "<img src=\"/taskPerfGraph?jobid=" + jobid + "&taskid="
+				+ taskid + "&name=HDFS\">");
 
-<h2>Non-Running Tasks</h2>
-<table border=2 cellpadding="5" cellspacing="2">
-<tr><td align="center">Task Attempts</td><td>Status</td>
-  <%
-    for(TaskStatus status: tracker.getNonRunningTasks()) {
-      out.print("<tr><td>" + status.getTaskID() + "</td>");
-      out.print("<td>" + status.getRunState() + "</td></tr>\n");
-    }
-  %>
-</table>
+		out.println("</p>");
+		out.println("<p>");
 
+		out.println("<img src=\"/taskPerfGraph?jobid=" + jobid + "&taskid="
+				+ taskid + "&name=CombineRecords\">"
+				+ "<img src=\"/taskPerfGraph?jobid=" + jobid + "&taskid="
+				+ taskid + "&name=Bytes\">");
+		if (!isMap) {
+			out.println("</p><p><img src=\"/taskPerfGraph?jobid=" + jobid
+					+ "&taskid=" + taskid + "&name=SpilledRecords\">");
+		}
+		out.println("</p>");
+		out.println("<h2>Metrics From PidStat and Runtime working on MapReduce Tasks</h2>");
+		out.println("<p>");
+		out.println("<img src=\"/taskPerfGraph?jobid=" + jobid + "&taskid="
+				+ taskid + "&name=CPUAndIO\"></p><p>"
+				+ "<img src=\"/taskPerfGraph?jobid=" + jobid + "&taskid="
+				+ taskid + "&name=Memory\">"
+				+ "<img src=\"/taskPerfGraph?jobid=" + jobid + "&taskid="
+				+ taskid + "&name=JVM\">");
+		out.println("</p>");
 
-<h2>Tasks from Running Jobs</h2>
-<center>
-<table border=2 cellpadding="5" cellspacing="2">
-<tr><td align="center">Task Attempts</td><td>Status</td>
-    <td>Progress</td><td>Errors</td></tr>
+		out.println("<h2>JVM Heap Usage</h2>");
+		out.println("<p>");
+		out.println("<img src=\"/taskPerfGraph?jobid=" + jobid + "&taskid="
+				+ taskid + "&name=S0S1\">"
+				+ "<img src=\"/taskPerfGraph?jobid=" + jobid + "&taskid="
+				+ taskid + "&name=Eden\">"
+				+ "<img src=\"/taskPerfGraph?jobid=" + jobid + "&taskid="
+				+ taskid + "&name=Old\">"
+				+ "<img src=\"/taskPerfGraph?jobid=" + jobid + "&taskid="
+				+ taskid + "&name=GC\">");
+		out.println("</p>");
 
-  <%
-     itr = tracker.getTasksFromRunningJobs().iterator();
-     while (itr.hasNext()) {
-       TaskStatus status = (TaskStatus) itr.next();
-       out.print("<tr><td>" + status.getTaskID());
-       out.print("</td><td>" + status.getRunState()); 
-       out.print("</td><td>" + 
-                 StringUtils.formatPercent(status.getProgress(), 2));
-       out.print("</td><td><pre>" + status.getDiagnosticInfo() + "</pre></td>");
-       out.print("</tr>\n");
-     }
-  %>
-</table>
-</center>
+		out.println("<p>");
+		out.println("<h2><a href = " + textHerf
+				+ ">Text Version of Metrics/Counters/JVM/Jstat</a></h2>");
+		out.println("</p>");
 
+		out.println(ServletUtil.htmlFooter());
+	}
+	else if(isText.equalsIgnoreCase("true")) {
+		String logPath = System.getProperty("hadoop.log.dir");
+		String myMetrics;
+     	if(logPath.endsWith(File.separator))
+     		myMetrics = logPath + "memMetrics";
+     	else
+     		myMetrics = logPath + File.separator + "memMetrics";
+     	String jobidDir = myMetrics + File.separator + jobid + File.separator;
+     	
+     	File countersFile = new File(jobidDir + taskid + ".counters");
+     	File metricsFile = new File(jobidDir + taskid + ".pidstat");
+     	File jvmFile = new File(jobidDir + taskid + ".jvm");
+     	File jstatFile = new File(jobidDir + taskid + ".jstat");
+     	
+		try {
+			BufferedReader reader;
+			String line;
+			out.println("<h2>Counters Information</h2>");
+			out.println("<pre>");
+			if(countersFile.exists()) {
 
-<h2>Local Logs</h2>
-<a href="/logs/">Log</a> directory
+				reader = new BufferedReader(new FileReader(countersFile));
+				while ((line = reader.readLine()) != null) {
+					out.println(line);		
+				}
+				reader.close();
+			}
+			out.println("</pre>");
 
-<%
-out.println(ServletUtil.htmlFooter());
-%>
+			out.println("<h2>Metrics Information</h2>");
+			out.println("<pre>");
+			if(metricsFile.exists()) {
+
+				reader = new BufferedReader(new FileReader(metricsFile));
+				while ((line = reader.readLine()) != null) {
+					out.println(line);		
+				}
+				reader.close();
+			}
+			out.println("</pre>");
+
+			out.println("<h2>JVM Memory Information</h2>");
+			out.println("<pre>");
+			if(jvmFile.exists()) {
+
+				reader = new BufferedReader(new FileReader(jvmFile));
+				while ((line = reader.readLine()) != null) {
+					out.println(line);		
+				}
+				reader.close();
+			}
+			out.println("</pre>");
+
+			out.println("<h2>JVM Heap Usage</h2>");
+			out.println("<pre>");
+			if(jstatFile.exists()) {
+
+				reader = new BufferedReader(new FileReader(jstatFile));
+				while ((line = reader.readLine()) != null) {
+					out.println(line);		
+				}
+				reader.close();
+			}
+			out.println("</pre>");
+
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		out.println(ServletUtil.htmlFooter());
+	}
+	%>

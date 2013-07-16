@@ -51,7 +51,6 @@ public class TaskPerfGraphServlet extends HttpServlet {
 				+ jobid + File.separator + taskid + ".counters");
 		File jvmFile = new File(logDir, "memMetrics" + File.separator
 				+ jobid + File.separator + taskid + ".jvm");
-
 		File jstatFile = new File(logDir, "memMetrics" + File.separator
 				+ jobid + File.separator + taskid + ".jstat");
 
@@ -64,10 +63,10 @@ public class TaskPerfGraphServlet extends HttpServlet {
 				boolean isMap = taskid.contains("_m_");
 				imageList = new ArrayList<BufferedImage>();
 
-				List<ArrayList<String>> countersList = null;
-				List<ArrayList<String>> pidstatList = null;
-				List<ArrayList<String>>	jvmList = null;
-				List<ArrayList<String>> jstatList = null;
+				List<ArrayList<String>> countersList = null; // 4) map: , reduce: 
+				List<ArrayList<String>> pidstatList = null;  // 1) CpuAndIO, Mem(VSZ, RSS)
+				List<ArrayList<String>>	jvmList = null;      // 2) JVM (JVMUsed, Total, Max)
+				List<ArrayList<String>> jstatList = null;    // 3) S0/S1, Eden/New, OldAndGC, GCTime
 
 				if (countersFile.exists())
 					countersList = TaskCountersImage.parse(countersFile, isMap);
@@ -83,7 +82,6 @@ public class TaskPerfGraphServlet extends HttpServlet {
 					imageList.add(null);
 				} else {
 					imageList.add(TaskMetricsImage.plotCpuAndIO(pidstatList));
-
 					imageList.add(TaskMetricsImage.plotMEM(pidstatList));
 				}
 
@@ -99,14 +97,14 @@ public class TaskPerfGraphServlet extends HttpServlet {
 					imageList.add(null);
 					imageList.add(null);
 					imageList.add(null);
-					imageList.add(null);
+					//imageList.add(null);
 				}
 				else {
 					imageList.add(JstatMetricsImage.plotSurvivorSpace(jstatList));
 					imageList.add(JstatMetricsImage.plotEdenAndNewGen(jstatList));
-					imageList.add(JstatMetricsImage.plotOldGen(jstatList));
-					imageList.add(JstatMetricsImage.plotPermGen(jstatList));
+					imageList.add(JstatMetricsImage.plotOldGenAndGC(jstatList));
 					imageList.add(JstatMetricsImage.plotGC(jstatList));
+					//imageList.add(JstatMetricsImage.plotGCCount(jstatList));
 				}
 
 
@@ -158,21 +156,19 @@ public class TaskPerfGraphServlet extends HttpServlet {
 			image = imageList.get(4);
 		else if (name.equals("Old"))
 			image = imageList.get(5);
-		else if (name.equals("Perm"))
-			image = imageList.get(6);
 		else if (name.equals("GC"))
-			image = imageList.get(7);
+			image = imageList.get(6);
 
 		else if (name.equals("MRRecords"))
-			image = imageList.get(8);
+			image = imageList.get(7);
 		else if (name.equals("HDFS"))
-			image = imageList.get(9);
+			image = imageList.get(8);
 		else if (name.equals("CombineRecords"))
-			image = imageList.get(10);
+			image = imageList.get(9);
 		else if (name.equals("Bytes"))
-			image = imageList.get(11);
+			image = imageList.get(10);
 		else if (name.equals("SpilledRecords"))
-			image = imageList.get(12);
+			image = imageList.get(11);
 
 
 		if (image != null)

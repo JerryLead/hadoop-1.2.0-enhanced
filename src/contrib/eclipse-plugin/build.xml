@@ -42,6 +42,9 @@
     <pathelement location="${build.classes}"/>
     <pathelement location="${hadoop.root}/build/classes"/>
     <path refid="eclipse-sdk-jars"/>
+  	<fileset dir="${hadoop.root}">
+  	        <include name="*.jar" />
+  	</fileset>
   </path>
 
   <!-- Skip building if eclipse.home is unset. -->
@@ -66,8 +69,18 @@
   <!-- Override jar target to specify manifest -->
   <target name="jar" depends="compile" unless="skip.contrib">
     <mkdir dir="${build.dir}/lib"/>
+  	<copy file="${hadoop.root}/hadoop-core-${version}.jar" tofile="${build.dir}/lib/hadoop-core.jar" verbose="true"/>
+  	<copy file="${hadoop.root}/lib/commons-cli-${commons-cli.version}.jar"  todir="${build.dir}/lib" verbose="true"/>
+  	<copy file="${hadoop.root}/lib/commons-configuration-${commons-configuration.version}.jar"  todir="${build.dir}/lib" verbose="true"/>
+  	<copy file="${hadoop.root}/lib/commons-httpclient-${commons-httpclient.version}.jar"  todir="${build.dir}/lib" verbose="true"/>
+  	<copy file="${hadoop.root}/lib/commons-lang-${commons-lang.version}.jar"  todir="${build.dir}/lib" verbose="true"/>
+  	<copy file="${hadoop.root}/lib/jackson-core-asl-${jackson-core-asl.version}.jar"  todir="${build.dir}/lib" verbose="true"/>
+  	<copy file="${hadoop.root}/lib/jackson-mapper-asl-${jackson-mapper-asl.version}.jar"  todir="${build.dir}/lib" verbose="true"/>
+  	<!--
     <copy file="${hadoop.root}/build/hadoop-core-${version}.jar" tofile="${build.dir}/lib/hadoop-core.jar" verbose="true"/>
+    
     <copy file="${hadoop.root}/build/ivy/lib/Hadoop/common/commons-cli-${commons-cli.version}.jar"  todir="${build.dir}/lib" verbose="true"/>
+   -->
     <jar
       jarfile="${build.dir}/hadoop-${name}-${version}.jar"
       manifest="${root}/META-INF/MANIFEST.MF">

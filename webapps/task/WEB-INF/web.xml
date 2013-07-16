@@ -5,6 +5,17 @@
    xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
    version="2.5">
 
+<!-- added by Lijie Xu -->
+	<servlet>
+        <servlet-name>org.apache.hadoop.mapred.taskPerf_jsp</servlet-name>
+        <servlet-class>org.apache.hadoop.mapred.taskPerf_jsp</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>org.apache.hadoop.mapred.taskPerf_jsp</servlet-name>
+        <url-pattern>/taskPerf.jsp</url-pattern>
+    </servlet-mapping>
+<!-- added end -->
 
     <servlet>
         <servlet-name>org.apache.hadoop.mapred.tasktracker_jsp</servlet-name>

@@ -407,13 +407,13 @@ class ReduceTask extends Task {
           reporter, spilledRecordsCounter, null)
       : reduceCopier.createKVIterator(job, rfs, reporter);
     */
-    RawKeyValueIterator rIter = isLocal //在sort阶段竟然没有combine！！！
+    RawKeyValueIterator rIter = isLocal 
   	      ? Merger.merge(job, rfs, job.getMapOutputKeyClass(),
   	          job.getMapOutputValueClass(), codec, getMapFiles(rfs, true),
   	          !conf.getKeepFailedTaskFiles(), job.getInt("io.sort.factor", 100),
   	          new Path(getTaskID().toString()), job.getOutputKeyComparator(),
   	          reporter, null, spilledRecordsCounter)
-  	      : reduceCopier.createKVIterator(job, rfs, reporter); //createKVIterator触动将内存中的小根堆的Segments输出到硬盘上map_i.out
+  	      : reduceCopier.createKVIterator(job, rfs, reporter); 
   	//modified end
   	      
     // free up the data structures
@@ -2516,6 +2516,8 @@ class ReduceTask extends Task {
           }
         //added by LijieXu
           long totalRecordsBeforeCombine = spilledRecordsCounter.getCounter() - currentSpillRecords;
+         
+          
           LOG.info("[InMemorySortMerge]<SegmentsNum = " + numMemDiskSegments + ", "
       		  		+ "Records = " +  totalRecordsBeforeCombine + ", "
 		  			+ "BytesBeforeMerge = " + inMemToDiskBytes + ", "
@@ -2612,7 +2614,7 @@ class ReduceTask extends Task {
       //added end
       
     //modified by LijieXu modify spilledRecordsCounter form readsCounter to writesCounter
-      return Merger.merge(job, fs, keyClass, valueClass, //最后merge（mapOutputsFilesInMemory中的和in-memory/On-disk合并后的segments）
+      return Merger.merge(job, fs, keyClass, valueClass, 
                    finalSegments, finalSegments.size(), tmpDir,
                    comparator, reporter, null, spilledRecordsCounter);
       //modified end
@@ -2924,7 +2926,7 @@ class ReduceTask extends Task {
                    " segments...");
           
         //modified by LijieXu modify spilledRecordsCounter from readsCounter to writesCounter
-          rIter = Merger.merge(conf, rfs, //还会重用小根堆的merge方法
+          rIter = Merger.merge(conf, rfs, 
                                (Class<K>)conf.getMapOutputKeyClass(),
                                (Class<V>)conf.getMapOutputValueClass(),
                                inMemorySegments, inMemorySegments.size(),

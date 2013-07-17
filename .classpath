@@ -104,6 +104,7 @@
 	<classpathentry kind="lib" path="src/contrib/thriftfs/lib/hadoopthriftapi.jar"/>
 	<classpathentry kind="lib" path="src/contrib/thriftfs/lib/libthrift.jar"/>
 	<classpathentry kind="lib" path="lib/PerformanceAnalysis.jar"/>
+	<classpathentry kind="lib" path="lib/JavaPlot.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

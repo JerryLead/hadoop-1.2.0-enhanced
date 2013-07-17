@@ -285,7 +285,7 @@ class Child {
         }
         
         Thread jvmStat = null;
-        final int jvmInterval = job.getInt("child.monitor.jstat.seconds", 0);
+        final int jvmInterval = job.getInt("child.monitor.jvm.seconds", 0);
         
     	if(task.isMapOrReduce() && jvmInterval != 0 ) {
 
@@ -356,20 +356,19 @@ class Child {
             	private String output = memMetricsDir.getAbsolutePath()+ File.separator + taskid + ".jstat";
             	private String date = "exec date +%s >> " + output;
             	private String gccapacity = "exec $JAVA_HOME/bin/jstat -gccapacity " + jvmPID + " > " + output;
-            	private String gc = "exec $JAVA_HOME/bin/jstat -gc -t " + jvmPID + " " + interval + "s >> " + output;
-   			
-            	
+            	private String gc = "exec $JAVA_HOME/bin/jstat -gc -t " + jvmPID + " " + jstatInterval + "s >> " + output;
+ 
         		@Override
         		public void run() {	
             			Process p = null;
-            			try {	
+            			try {	        				
             				p = new ProcessBuilder("bash", "-c", gccapacity).start();
-       					p.waitFor();
-       					
-       					p = new ProcessBuilder("bash", "-c", date).start();
-       					p.waitFor();
+            				p.waitFor();
+
+            				p = new ProcessBuilder("bash", "-c", date).start();
+            				p.waitFor();
        				
-       					p = new ProcessBuilder("bash", "-c", gc).start();
+            				p = new ProcessBuilder("bash", "-c", gc).start();
             				
             				int exitCode = p.waitFor();
             				

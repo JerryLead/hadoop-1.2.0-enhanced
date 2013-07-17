@@ -2499,11 +2499,34 @@ class ReduceTask extends Task {
             Merger.writeFile(rIter, writer, reporter, job);
             writer.close();
             long decompressedBytesWritten = writer.decompressedBytesWritten;
-            writer = null;
+            //modified by Lijie Xu
+            //writer = null;
+            //
             FileStatus fileStatus = fs.getFileStatus(outputPath);
             CompressAwareFileStatus compressedFileStatus = new CompressAwareFileStatus(
                 fileStatus, decompressedBytesWritten);
             addToMapOutputFilesOnDisk(compressedFileStatus);
+            
+          //added by LijieXu
+            long totalRecordsBeforeCombine = spilledRecordsCounter.getCounter() - currentSpillRecords;
+           
+            
+            LOG.info("[InMemorySortMerge]<SegmentsNum = " + numMemDiskSegments + ", "
+        		  		+ "Records = " +  totalRecordsBeforeCombine + ", "
+  		  			+ "BytesBeforeMerge = " + inMemToDiskBytes + ", "
+  		  			+ "RawLength = " + writer.getRawLength() + ", "
+  		  			+ "CompressedLength = " + writer.getCompressedLength() + ">");
+        
+            //added end
+            //modified by LijieXu
+            /*
+            LOG.info("Merged " + numMemDiskSegments + " segments, " + //3
+                     inMemToDiskBytes + " bytes to disk to satisfy " + //11,391,807
+                     "reduce memory limit");
+             */
+            writer = null;
+            //modified end
+            
           } catch (Exception e) {
             if (null != outputPath) {
               fs.delete(outputPath, true);
@@ -2514,24 +2537,7 @@ class ReduceTask extends Task {
               writer.close();
             }
           }
-        //added by LijieXu
-          long totalRecordsBeforeCombine = spilledRecordsCounter.getCounter() - currentSpillRecords;
-         
-          
-          LOG.info("[InMemorySortMerge]<SegmentsNum = " + numMemDiskSegments + ", "
-      		  		+ "Records = " +  totalRecordsBeforeCombine + ", "
-		  			+ "BytesBeforeMerge = " + inMemToDiskBytes + ", "
-		  			+ "RawLength = " + writer.getRawLength() + ", "
-		  			+ "CompressedLength = " + writer.getCompressedLength() + ">");
-      
-          //added end
-          //modified by LijieXu
-          /*
-          LOG.info("Merged " + numMemDiskSegments + " segments, " + //3
-                   inMemToDiskBytes + " bytes to disk to satisfy " + //11,391,807
-                   "reduce memory limit");
-           */
-          //modified end
+        
          
           inMemToDiskBytes = 0;
           memDiskSegments.clear();

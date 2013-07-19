@@ -30,6 +30,7 @@
 <%!	private static final long serialVersionUID = 1L;
 %>
 
+
 <%	
   String logFile = request.getParameter("logFile");
   String tipid = request.getParameter("tipid");
@@ -93,8 +94,20 @@
                                 String type, JspWriter out,
                                 String logFile) 
   throws Exception {
-    out.print("<tr>"); 
-    out.print("<td>" + taskAttempt.get(Keys.TASK_ATTEMPT_ID) + "</td>");
+	
+	//modified by LijieXu
+		String taskLogsUrl = JobHistory.getTaskLogsUrl(taskAttempt);
+		String hostAndPort = taskLogsUrl.substring(0, taskLogsUrl.indexOf("/tasklog"));
+		String taskid = taskAttempt.get(Keys.TASK_ATTEMPT_ID);
+		String jobid = "job" + taskid.substring(7, taskid.indexOf('_', 21));
+		//http://slave3:50060/taskPerf.jsp?jobid=job_201205031949_0001&taskid=attempt_201205031949_0001_m_000001_0
+		String taskPerUrl =  hostAndPort + "/taskPerf.jsp?jobid=" + jobid + "&taskid=" + taskid;
+	    out.print("<tr>");
+	    out.print("<td><a href=\"" + taskPerUrl + "\">" + taskAttempt.get(Keys.TASK_ATTEMPT_ID) + "</a></td>");
+	//modified end
+	
+    //out.print("<tr>"); 
+    //out.print("<td>" + taskAttempt.get(Keys.TASK_ATTEMPT_ID) + "</td>");
     out.print("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat,
               taskAttempt.getLong(Keys.START_TIME), 0 ) + "</td>"); 
     if (Values.REDUCE.name().equals(type)) {
@@ -117,7 +130,7 @@
 
     // Print task log urls
     out.print("<td>");	
-    String taskLogsUrl = JobHistory.getTaskLogsUrl(taskAttempt);
+    //String taskLogsUrl = JobHistory.getTaskLogsUrl(taskAttempt);
     if (taskLogsUrl != null) {
 	    String tailFourKBUrl = taskLogsUrl + "&start=-4097";
 	    String tailEightKBUrl = taskLogsUrl + "&start=-8193";

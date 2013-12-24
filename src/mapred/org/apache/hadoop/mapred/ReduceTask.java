@@ -392,7 +392,11 @@ class ReduceTask extends Task {
       }
     }
     copyPhase.complete();                         // copy is already complete
+    
     setPhase(TaskStatus.Phase.SORT);
+    //added by Lijie Xu
+    LOG.info("[Sort phase begins]");
+    //added end
     statusUpdate(umbilical);
 
     final FileSystem rfs = FileSystem.getLocal(job).getRaw();
@@ -421,6 +425,9 @@ class ReduceTask extends Task {
     
     sortPhase.complete();                         // sort is complete
     setPhase(TaskStatus.Phase.REDUCE); 
+    //added by Lijie Xu
+    LOG.info("[Reduce phase begins]");
+    //added end
     statusUpdate(umbilical);
     Class keyClass = job.getMapOutputKeyClass();
     Class valueClass = job.getMapOutputValueClass();
@@ -434,6 +441,7 @@ class ReduceTask extends Task {
                     keyClass, valueClass);
     }
     done(umbilical, reporter);
+    LOG.info("[Reduce phase ends]");
   }
 
   private class OldTrackingRecordWriter<K, V> implements RecordWriter<K, V> {
@@ -1566,12 +1574,17 @@ class ReduceTask extends Task {
         // Shuffle
         MapOutput mapOutput = null;
         if (shuffleInMemory) {
+          /*modified by Lijie Xu
           if (LOG.isDebugEnabled()) {
             LOG.debug("Shuffling " + decompressedLength + " bytes (" + 
                 compressedLength + " raw bytes) " + 
                 "into RAM from " + mapOutputLoc.getTaskAttemptId());
           }
-
+          modified end*/
+          LOG.info("Shuffling " + decompressedLength + " bytes (" + 
+                  compressedLength + " raw bytes) " + 
+                  "into RAM from " + mapOutputLoc.getTaskAttemptId());
+          
           mapOutput = shuffleInMemory(mapOutputLoc, connection, input,
                                       (int)decompressedLength,
                                       (int)compressedLength);
@@ -2480,7 +2493,9 @@ class ReduceTask extends Task {
           final Path outputPath =
               mapOutputFile.getInputFileForWrite(mapId, inMemToDiskBytes);
           
+          
           //modified by LijieXu modify spilledRecordsCounter from readsCounter to writesCounter
+          LOG.info("[InMemorySortMerge]");
           final RawKeyValueIterator rIter = Merger.merge(job, fs,
               keyClass, valueClass, memDiskSegments, numMemDiskSegments,
               tmpDir, comparator, reporter, null, spilledRecordsCounter);
@@ -2589,8 +2604,9 @@ class ReduceTask extends Task {
         final int numInMemSegments = memDiskSegments.size();
         diskSegments.addAll(0, memDiskSegments);
         memDiskSegments.clear();
-        
+   
       //modified by LijieXu modify spilledRecordsCounter from readsCounter to writesCounter
+        LOG.info("[MixSortMerge begins]");
         RawKeyValueIterator diskMerge = Merger.merge( 
             job, fs, keyClass, valueClass, codec, diskSegments,
             ioSortFactor, numInMemSegments, tmpDir, comparator,
@@ -2928,6 +2944,7 @@ class ReduceTask extends Task {
         long decompressedBytesWritten;
         RawKeyValueIterator rIter = null;
         try {
+          LOG.info("[InMemoryShuffleMerge begins]");
           LOG.info("Initiating in-memory merge with " + noInMemorySegments + 
                    " segments...");
           
@@ -2956,7 +2973,7 @@ class ReduceTask extends Task {
           writer.close();
           decompressedBytesWritten = writer.decompressedBytesWritten;
           
-        //added by LijieXu
+          //added by LijieXu
           long totalRecordsBeforeCombine = spilledRecordsCounter.getCounter() - currentSpillRecords;
           long totalRecordsAfterCombine = spilledRecordsCounter.getCounter() - currentSpillRecords;
           
@@ -2964,7 +2981,7 @@ class ReduceTask extends Task {
         	  totalRecordsBeforeCombine = reporter.getCounter(Task.Counter.COMBINE_INPUT_RECORDS).getCounter() - currentCombineInputRecords;
         	  totalRecordsAfterCombine = reduceCombineOutputCounter.getCounter() - currentCombineRecords;
           }
-         //added end
+          //added end
           
           //modified by LijieXu
           /*

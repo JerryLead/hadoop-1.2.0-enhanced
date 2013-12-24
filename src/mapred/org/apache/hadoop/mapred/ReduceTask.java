@@ -2604,7 +2604,7 @@ class ReduceTask extends Task {
         final int numInMemSegments = memDiskSegments.size();
         diskSegments.addAll(0, memDiskSegments);
         memDiskSegments.clear();
-   
+ 
       //modified by LijieXu modify spilledRecordsCounter from readsCounter to writesCounter
         LOG.info("[MixSortMerge begins]");
         RawKeyValueIterator diskMerge = Merger.merge( 

@@ -2495,7 +2495,7 @@ class ReduceTask extends Task {
           
           
           //modified by LijieXu modify spilledRecordsCounter from readsCounter to writesCounter
-          LOG.info("[InMemorySortMerge]");
+          LOG.info("[InMemorySortMerge begins]");
           final RawKeyValueIterator rIter = Merger.merge(job, fs,
               keyClass, valueClass, memDiskSegments, numMemDiskSegments,
               tmpDir, comparator, reporter, null, spilledRecordsCounter);

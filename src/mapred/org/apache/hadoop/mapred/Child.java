@@ -256,7 +256,7 @@ class Child {
              if(!memMetricsDir.exists())
             	 memMetricsDir.mkdirs();
              
-             pidStat = new Thread() {
+             pidStat = new Thread("Pidstat") {
             	
             	private String shellcommand = "exec '/usr/bin/pidstat' -dru -p " + jvmPID 
         				+ " -h " + interval + " > " + memMetricsDir.getAbsolutePath()
@@ -292,7 +292,7 @@ class Child {
              if(!memMetricsDir.exists())
              	 memMetricsDir.mkdirs();			
              
-             jvmStat = new Thread() {
+             jvmStat = new Thread("jvmusage") {
             	 
 				 private String jvmPath = memMetricsDir.getAbsolutePath() + File.separator 
 						 + taskid + ".memory";
@@ -351,7 +351,7 @@ class Child {
             if(!memMetricsDir.exists())
              	 memMetricsDir.mkdirs();			
 
-            jstat = new Thread() {
+            jstat = new Thread("jstat") {
             	
             	private String output = memMetricsDir.getAbsolutePath()+ File.separator + taskid + ".jstat";
             	private String date = "exec date +%s >> " + output;

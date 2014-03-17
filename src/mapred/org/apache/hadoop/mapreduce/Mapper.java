@@ -18,11 +18,14 @@
 
 package org.apache.hadoop.mapreduce;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.mapred.Utils;
+import org.apache.hadoop.util.Shell;
 
 /** 
  * Maps input key/value pairs to a set of intermediate key/value pairs.  
@@ -138,14 +141,54 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
    * @param context
    * @throws IOException
    */
+  /*
+  original version:
   public void run(Context context) throws IOException, InterruptedException {
+   
     setup(context);
     try {
       while (context.nextKeyValue()) {
-        map(context.getCurrentKey(), context.getCurrentValue(), context);
+        map(context.getCurrentKey(), context.getCurrentValue(), context); 
       }
     } finally {
       cleanup(context);
     }
   }
+  */
+  // modified by Lijie Xu to add heap dump
+  public void run(Context context) throws IOException, InterruptedException {
+      long mapinputrecordslimit = context.getConfiguration().getLong("heapdump.map.input.records", 0);
+      
+      if(mapinputrecordslimit == 0) {
+	  setup(context);
+	  try {
+	      while (context.nextKeyValue()) {
+		  map(context.getCurrentKey(), context.getCurrentValue(), context); 
+	      }
+	  } finally {
+	      cleanup(context);
+	  }
+      }
+      
+      else {
+	  long i = 0;
+	  setup(context);
+	  try {
+	      while (context.nextKeyValue()) {
+		  if(i++ == mapinputrecordslimit) {
+		      Utils.heapdump(context.getConfiguration().get("heapdump.path", "/tmp"), "mapInRecords-" + i);
+		     
+		      break;      
+		  }
+		  map(context.getCurrentKey(), context.getCurrentValue(), context); 
+	      }
+	  } finally {
+	      cleanup(context);
+	  }
+      }
+    }
+  // modified end
+   
+			 
+    
 }

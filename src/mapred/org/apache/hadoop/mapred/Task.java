@@ -1354,16 +1354,47 @@ abstract public class Task implements Writable, Configurable {
 
     private final Counters.Counter combineInputCounter;
 
+    // added by Lijie Xu
+    private long mcombineinputrecordslimit;
+    private long rcombineinputrecordslimit;
+    private String dumppath;
+    private boolean isMapper;
+    // added end
+    
+    // modified by Lijie Xu
     public CombineValuesIterator(RawKeyValueIterator in,
         RawComparator<KEY> comparator, Class<KEY> keyClass,
         Class<VALUE> valClass, Configuration conf, Reporter reporter,
-        Counters.Counter combineInputCounter) throws IOException {
+        Counters.Counter combineInputCounter, boolean isMapper) throws IOException {
       super(in, comparator, keyClass, valClass, conf, reporter);
       this.combineInputCounter = combineInputCounter;
+      
+      // added by Lijie Xu
+      this.mcombineinputrecordslimit = conf.getLong("headdump.map.combine.input.records", 0);
+      this.rcombineinputrecordslimit = conf.getLong("heapdump.reduce.combine.input.records", 0);
+      this.dumppath = conf.get("heapdump.path", "/tmp");
+      this.isMapper = isMapper;
+      // added end
     }
+    // modified end
 
     public VALUE next() {
       combineInputCounter.increment(1);
+      
+      if(isMapper) {
+	  if(combineInputCounter.getValue() == mcombineinputrecordslimit) {
+	      Utils.heapdump(dumppath, "mCombInRecords-" + mcombineinputrecordslimit);
+	      System.exit(0);
+	  }
+      }
+      else {
+	  if(combineInputCounter.getValue() == rcombineinputrecordslimit) {
+	      Utils.heapdump(dumppath, "rCombInRecords-" + rcombineinputrecordslimit);
+	      System.exit(0);
+	  } 
+      }
+      
+	    // added end
       return super.next();
     }
   }
@@ -1458,7 +1489,9 @@ abstract public class Task implements Writable, Configurable {
         (Class<? extends Reducer<K,V,K,V>>) job.getCombinerClass();
 
       if (cls != null) {
-        return new OldCombinerRunner(cls, job, inputCounter, reporter);
+	// modified by Lijie Xu
+        return new OldCombinerRunner(cls, job, inputCounter, reporter, taskId.isMap());
+        // modified end
       }
       // make a task context so we can get the classes
       org.apache.hadoop.mapreduce.TaskAttemptContext taskContext =
@@ -1480,18 +1513,26 @@ abstract public class Task implements Writable, Configurable {
     private final Class<K> keyClass;
     private final Class<V> valueClass;
     private final RawComparator<K> comparator;
+    
+    // added by Lijie Xu
+    private boolean isMapper;
+    // added end
 
+    // modified by Lijie Xu
     @SuppressWarnings("unchecked")
     protected OldCombinerRunner(Class<? extends Reducer<K,V,K,V>> cls,
                                 JobConf conf,
                                 Counters.Counter inputCounter,
-                                TaskReporter reporter) {
+                                TaskReporter reporter, boolean isMapper) {
       super(inputCounter, conf, reporter);
       combinerClass = cls;
       keyClass = (Class<K>) job.getMapOutputKeyClass();
       valueClass = (Class<V>) job.getMapOutputValueClass();
       comparator = (RawComparator<K>) job.getOutputKeyComparator();
+      
+      this.isMapper = isMapper;
     }
+    // modified end
 
     @SuppressWarnings("unchecked")
     protected void combine(RawKeyValueIterator kvIter,
@@ -1500,10 +1541,12 @@ abstract public class Task implements Writable, Configurable {
       Reducer<K,V,K,V> combiner = 
         ReflectionUtils.newInstance(combinerClass, job);
       try {
+	// modified by Lijie Xu
         CombineValuesIterator<K,V> values = 
           new CombineValuesIterator<K,V>(kvIter, comparator, keyClass, 
                                          valueClass, job, Reporter.NULL,
-                                         inputCounter);
+                                         inputCounter, isMapper);
+        // modified end
         while (values.more()) {
           combiner.reduce(values.getKey(), values, combineCollector,
               Reporter.NULL);

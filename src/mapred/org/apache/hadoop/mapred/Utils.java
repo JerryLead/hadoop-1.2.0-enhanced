@@ -18,8 +18,12 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.File;
+import java.io.IOException;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.util.Shell;
 
 /**
  * A utility class. It provides
@@ -55,6 +59,37 @@ public class Utils {
         return !(path.toString().contains("_logs"));
       }
     }
+  }
+  
+  
+  public static void heapdump(String dumppath, String name) {
+	String pid = "";
+
+	if (!Shell.WINDOWS) {
+	   pid = System.getenv().get("JVM_PID");
+	}
+	
+	if(pid.isEmpty())
+	    return;
+	
+	String dumpComm = "exec $JAVA_HOME/bin/jmap -dump:live,file=" + dumppath 
+		+ File.separatorChar + name + "-pid-" + pid + ".hprof " + pid;
+
+		
+	Process p = null;
+	
+	try {
+	    p = new ProcessBuilder("bash", "-c", dumpComm).start();
+	    int exitCode = p.waitFor();
+	} catch (IOException e) {
+	    // TODO Auto-generated catch block
+	    e.printStackTrace();
+	} catch (InterruptedException e) {
+	    // TODO Auto-generated catch block
+	    e.printStackTrace();
+	} finally {
+	    p.destroy();
+	}		     		
   }
 }
 

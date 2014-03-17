@@ -41,6 +41,10 @@
   <path id="classpath">
     <pathelement location="${build.classes}"/>
     <pathelement location="${hadoop.root}/build/classes"/>
+    
+  	<!--hadoop-core -->    
+    <pathelement location="${hadoop.root}/hadoop-core-${version}.jar"/>
+  	
     <path refid="eclipse-sdk-jars"/>
   	<fileset dir="${hadoop.root}">
   	        <include name="*.jar" />

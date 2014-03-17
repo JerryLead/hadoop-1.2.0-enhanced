@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -29,7 +30,9 @@ import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
+import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.Shell;
 
 /**
  * The context passed to the {@link Reducer}.
@@ -56,6 +59,13 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
   private BytesWritable currentRawKey = new BytesWritable();
   private ValueIterable iterable = new ValueIterable();
 
+  // added by Lijie Xu
+  private long reduceinputrecordslimit;
+  private long mcombineinputrecordslimit;
+  private long rcombineinputrecordslimit;
+  private boolean isMapper;
+  // added end
+  
   public ReduceContext(Configuration conf, TaskAttemptID taskid,
                        RawKeyValueIterator input, 
                        Counter inputKeyCounter,
@@ -78,6 +88,13 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     this.valueDeserializer = serializationFactory.getDeserializer(valueClass);
     this.valueDeserializer.open(buffer);
     hasMore = input.next();
+    
+    // added by Lijie Xu
+    reduceinputrecordslimit = conf.getLong("heapdump.reduce.inout.records", 0);
+    mcombineinputrecordslimit = conf.getLong("headdump.map.combine.input.records", 0);
+    rcombineinputrecordslimit = conf.getLong("heapdump.reduce.combine.input.records", 0);
+    isMapper = taskid.isMap();
+    // added end
   }
 
   /** Start processing next unique key. */
@@ -128,6 +145,26 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
       nextKeyIsSame = false;
     }
     inputValueCounter.increment(1);
+ 
+    // added by Lijie Xu
+    if(isMapper) {
+	if(inputValueCounter.getValue() == mcombineinputrecordslimit) {
+	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "mCombInRecords-" + mcombineinputrecordslimit);
+	    return false;
+	}
+    }
+    else {
+	if(inputValueCounter.getValue() == rcombineinputrecordslimit) {
+	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "rCombInRecords-" + rcombineinputrecordslimit);
+	    return false;
+	}
+	
+	if(inputValueCounter.getValue() == reduceinputrecordslimit) {
+	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "redInRecords-" + reduceinputrecordslimit);
+	    return false;
+	}
+    } 
+    // added end
     return true;
   }
 
@@ -139,6 +176,7 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
   public VALUEIN getCurrentValue() {
     return value;
   }
+  
 
   protected class ValueIterator implements Iterator<VALUEIN> {
 

@@ -18,11 +18,14 @@
 
 package org.apache.hadoop.mapreduce;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
+import org.apache.hadoop.mapred.Utils;
+import org.apache.hadoop.util.Shell;
 
 /** 
  * Reduces a set of intermediate values which share a key to a smaller set of
@@ -170,6 +173,8 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
    * {@link #run(org.apache.hadoop.mapreduce.Reducer.Context)} method to
    * control how the reduce task works.
    */
+  // original version
+  /*
   public void run(Context context) throws IOException, InterruptedException {
     setup(context);
     try {
@@ -180,4 +185,42 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
       cleanup(context);
     }
   }
+  */
+  public void run(Context context) throws IOException, InterruptedException {
+      long reduceinputgroupslimit = context.getConfiguration().getLong("heapdump.reduce.input.group", 0);
+     
+      
+      if(reduceinputgroupslimit == 0) {
+	  setup(context);
+	  try {
+	      while (context.nextKey()) {
+		  reduce(context.getCurrentKey(), context.getValues(), context);
+	      }
+	  } finally {
+	      cleanup(context);
+	  }
+      }
+      
+      else {
+	  long i = 0;
+	  setup(context);
+	  try {
+	      while (context.nextKey()) {
+		  if(i++ == reduceinputgroupslimit) {
+		      Utils.heapdump(context.getConfiguration().get("heapdump.path", "/tmp"), "redinrecords-" + i);
+		     
+		      break;      
+		  }
+		  reduce(context.getCurrentKey(), context.getValues(), context);
+	      }
+	  } finally {
+	      cleanup(context);
+	  }
+      }
+      
+      
+      
+   }
+  
+  
 }

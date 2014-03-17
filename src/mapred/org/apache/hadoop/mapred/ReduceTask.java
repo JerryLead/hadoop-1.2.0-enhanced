@@ -82,7 +82,6 @@ import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
-
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.metrics2.MetricsException;
@@ -231,6 +230,10 @@ class ReduceTask extends Task {
 
   private class ReduceValuesIterator<KEY,VALUE> 
           extends ValuesIterator<KEY,VALUE> {
+    // added by Lijie Xu
+    private long reduceinputrecordslimit;
+    private String dumppath;
+    // added end
     public ReduceValuesIterator (RawKeyValueIterator in,
                                  RawComparator<KEY> comparator, 
                                  Class<KEY> keyClass,
@@ -238,11 +241,24 @@ class ReduceTask extends Task {
                                  Configuration conf, Progressable reporter)
       throws IOException {
       super(in, comparator, keyClass, valClass, conf, reporter);
+      
+      // added by Lijie Xu
+      reduceinputrecordslimit = conf.getLong("heapdump.reduce.input.records", 0);
+      dumppath = conf.get("heapdump.path", "/tmp");
+      
+      // added end
     }
 
     @Override
     public VALUE next() {
       reduceInputValueCounter.increment(1);
+      // added by Lijie Xu
+      if(reduceInputValueCounter.getCounter() == reduceinputrecordslimit) {
+	  Utils.heapdump(dumppath, "redInRecords-" + reduceinputrecordslimit);
+	  System.exit(0);
+      }
+	  
+      // added end
       return moveToNext();
     }
     
@@ -537,16 +553,40 @@ class ReduceTask extends Task {
           job.getOutputValueGroupingComparator(), keyClass, valueClass, 
           job, reporter);
       values.informReduceProgress();
-      while (values.more()) {
-        reduceInputKeyCounter.increment(1);
-        reducer.reduce(values.getKey(), values, collector, reporter);
-        if(incrProcCount) {
-          reporter.incrCounter(SkipBadRecords.COUNTER_GROUP, 
-              SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS, 1);
-        }
-        values.nextKey();
-        values.informReduceProgress();
+      
+      // modified by Lijie Xu
+      long reduceinputgroupslimit = job.getLong("heapdump.reduce.input.group", 0);
+      if(reduceinputgroupslimit == 0) {
+	  while (values.more()) {
+	        reduceInputKeyCounter.increment(1);
+	        reducer.reduce(values.getKey(), values, collector, reporter);
+	        if(incrProcCount) {
+	          reporter.incrCounter(SkipBadRecords.COUNTER_GROUP, 
+	              SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS, 1);
+	        }
+	        values.nextKey();
+	        values.informReduceProgress();
+	      }
+      
       }
+      else {
+	  while (values.more()) {
+	        reduceInputKeyCounter.increment(1);
+	        if(reduceInputKeyCounter.getValue() == reduceinputgroupslimit) {
+	            Utils.heapdump(job.get("heapdump.path", "/tmp"), "redingroups-" + reduceinputgroupslimit);	     
+		    break; 
+	        }
+	     
+	        reducer.reduce(values.getKey(), values, collector, reporter);
+	        if(incrProcCount) {
+	          reporter.incrCounter(SkipBadRecords.COUNTER_GROUP, 
+	              SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS, 1);
+	        }
+	        values.nextKey();
+	        values.informReduceProgress();
+	      }
+      }
+      // modified end
 
       //Clean up: repeated in catch block below
       reducer.close();

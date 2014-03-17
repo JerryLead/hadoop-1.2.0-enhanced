@@ -58,7 +58,7 @@ public class MapRunner<K1, V1, K2, V2>
       V1 value = input.createValue();
       
       // added by Lijie Xu
-      long i = 0;
+      long i = 1;
       // added end
       
       // modified by Lijie Xu
@@ -75,10 +75,9 @@ public class MapRunner<K1, V1, K2, V2>
       }
       else {
 	  while (input.next(key, value)) {
-		if(i++ == mapinrecordslimit) {
-		    Utils.heapdump(dumppath, "mapInRecords-" + i);
-		    break;
-		}
+		if(i++ == mapinrecordslimit) 
+		    Utils.heapdump(dumppath, "mapInRecords-" + mapinrecordslimit);
+
 	        // map pair to output
 	        mapper.map(key, value, output, reporter);
 	        if(incrProcCount) {

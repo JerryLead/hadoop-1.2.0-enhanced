@@ -187,7 +187,7 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
   }
   */
   public void run(Context context) throws IOException, InterruptedException {
-      long reduceinputgroupslimit = context.getConfiguration().getLong("heapdump.reduce.input.group", 0);
+      long reduceinputgroupslimit = context.getConfiguration().getLong("heapdump.reduce.input.groups", 0);
      
       
       if(reduceinputgroupslimit == 0) {
@@ -202,14 +202,12 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
       }
       
       else {
-	  long i = 0;
+	  long i = 1;
 	  setup(context);
 	  try {
 	      while (context.nextKey()) {
 		  if(i++ == reduceinputgroupslimit) {
-		      Utils.heapdump(context.getConfiguration().get("heapdump.path", "/tmp"), "redinrecords-" + i);
-		     
-		      break;      
+		      Utils.heapdump(context.getConfiguration().get("heapdump.path", "/tmp"), "redInGroups-" + reduceinputgroupslimit);      
 		  }
 		  reduce(context.getCurrentKey(), context.getValues(), context);
 	      }

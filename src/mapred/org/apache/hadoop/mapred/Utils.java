@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.util.Shell;
+import org.mortbay.log.Log;
 
 /**
  * A utility class. It provides
@@ -81,6 +82,8 @@ public class Utils {
 	try {
 	    p = new ProcessBuilder("bash", "-c", dumpComm).start();
 	    int exitCode = p.waitFor();
+	    Log.info("[HeapDump] generate " + dumppath 
+		+ File.separatorChar + name + "-pid-" + pid + ".hprof");
 	} catch (IOException e) {
 	    // TODO Auto-generated catch block
 	    e.printStackTrace();

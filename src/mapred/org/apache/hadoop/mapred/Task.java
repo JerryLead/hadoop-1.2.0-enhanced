@@ -1370,7 +1370,7 @@ abstract public class Task implements Writable, Configurable {
       this.combineInputCounter = combineInputCounter;
       
       // added by Lijie Xu
-      this.mcombineinputrecordslimit = conf.getLong("headdump.map.combine.input.records", 0);
+      this.mcombineinputrecordslimit = conf.getLong("heapdump.map.combine.input.records", 0);
       this.rcombineinputrecordslimit = conf.getLong("heapdump.reduce.combine.input.records", 0);
       this.dumppath = conf.get("heapdump.path", "/tmp");
       this.isMapper = isMapper;
@@ -1382,16 +1382,13 @@ abstract public class Task implements Writable, Configurable {
       combineInputCounter.increment(1);
       
       if(isMapper) {
-	  if(combineInputCounter.getValue() == mcombineinputrecordslimit) {
 	      Utils.heapdump(dumppath, "mCombInRecords-" + mcombineinputrecordslimit);
-	      System.exit(0);
-	  }
+
       }
       else {
-	  if(combineInputCounter.getValue() == rcombineinputrecordslimit) {
+	  if(combineInputCounter.getValue() == rcombineinputrecordslimit) 
 	      Utils.heapdump(dumppath, "rCombInRecords-" + rcombineinputrecordslimit);
-	      System.exit(0);
-	  } 
+
       }
       
 	    // added end

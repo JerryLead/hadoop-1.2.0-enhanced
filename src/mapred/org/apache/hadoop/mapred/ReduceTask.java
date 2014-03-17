@@ -255,7 +255,6 @@ class ReduceTask extends Task {
       // added by Lijie Xu
       if(reduceInputValueCounter.getCounter() == reduceinputrecordslimit) {
 	  Utils.heapdump(dumppath, "redInRecords-" + reduceinputrecordslimit);
-	  System.exit(0);
       }
 	  
       // added end
@@ -555,7 +554,7 @@ class ReduceTask extends Task {
       values.informReduceProgress();
       
       // modified by Lijie Xu
-      long reduceinputgroupslimit = job.getLong("heapdump.reduce.input.group", 0);
+      long reduceinputgroupslimit = job.getLong("heapdump.reduce.input.groups", 0);
       if(reduceinputgroupslimit == 0) {
 	  while (values.more()) {
 	        reduceInputKeyCounter.increment(1);
@@ -573,7 +572,7 @@ class ReduceTask extends Task {
 	  while (values.more()) {
 	        reduceInputKeyCounter.increment(1);
 	        if(reduceInputKeyCounter.getValue() == reduceinputgroupslimit) {
-	            Utils.heapdump(job.get("heapdump.path", "/tmp"), "redingroups-" + reduceinputgroupslimit);	     
+	            Utils.heapdump(job.get("heapdump.path", "/tmp"), "redInGroups-" + reduceinputgroupslimit);	     
 		    break; 
 	        }
 	     

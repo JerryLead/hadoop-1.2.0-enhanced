@@ -90,8 +90,8 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     hasMore = input.next();
     
     // added by Lijie Xu
-    reduceinputrecordslimit = conf.getLong("heapdump.reduce.inout.records", 0);
-    mcombineinputrecordslimit = conf.getLong("headdump.map.combine.input.records", 0);
+    reduceinputrecordslimit = conf.getLong("heapdump.reduce.input.records", 0);
+    mcombineinputrecordslimit = conf.getLong("heapdump.map.combine.input.records", 0);
     rcombineinputrecordslimit = conf.getLong("heapdump.reduce.combine.input.records", 0);
     isMapper = taskid.isMap();
     // added end
@@ -148,21 +148,19 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
  
     // added by Lijie Xu
     if(isMapper) {
-	if(inputValueCounter.getValue() == mcombineinputrecordslimit) {
+	if(inputValueCounter.getValue() == mcombineinputrecordslimit) 
 	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "mCombInRecords-" + mcombineinputrecordslimit);
-	    return false;
-	}
-    }
-    else {
-	if(inputValueCounter.getValue() == rcombineinputrecordslimit) {
-	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "rCombInRecords-" + rcombineinputrecordslimit);
-	    return false;
-	}
 	
-	if(inputValueCounter.getValue() == reduceinputrecordslimit) {
+    }
+    
+    else {
+	if(inputValueCounter.getValue() == rcombineinputrecordslimit) 
+	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "rCombInRecords-" + rcombineinputrecordslimit);
+	  
+	
+	if(inputValueCounter.getValue() == reduceinputrecordslimit) 
 	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "redInRecords-" + reduceinputrecordslimit);
-	    return false;
-	}
+	   
     } 
     // added end
     return true;

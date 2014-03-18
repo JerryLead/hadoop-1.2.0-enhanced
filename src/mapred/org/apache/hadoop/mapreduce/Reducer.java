@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
+import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.util.Shell;
 
@@ -190,18 +191,8 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
       long reduceinputgroupslimit = context.getConfiguration().getLong("heapdump.reduce.input.groups", 0);
      
       
-      if(reduceinputgroupslimit == 0) {
-	  setup(context);
-	  try {
-	      while (context.nextKey()) {
-		  reduce(context.getCurrentKey(), context.getValues(), context);
-	      }
-	  } finally {
-	      cleanup(context);
-	  }
-      }
-      
-      else {
+      if(reduceinputgroupslimit != 0 && !((ReduceContext)context).isCombine()) {
+	  
 	  long i = 1;
 	  setup(context);
 	  try {
@@ -216,6 +207,17 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
 	  }
       }
       
+      else {
+	  setup(context);
+	  try {
+	      while (context.nextKey()) {
+		  reduce(context.getCurrentKey(), context.getValues(), context);
+	      }
+	  } finally {
+	      cleanup(context);
+	  }
+      }
+  
       
       
    }

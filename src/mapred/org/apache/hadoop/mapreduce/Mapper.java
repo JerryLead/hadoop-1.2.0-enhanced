@@ -21,11 +21,14 @@ package org.apache.hadoop.mapreduce;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.util.Shell;
+
 
 /** 
  * Maps input key/value pairs to a set of intermediate key/value pairs.  
@@ -96,7 +99,11 @@ import org.apache.hadoop.util.Shell;
  * @see Reducer
  */
 public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
-
+    
+  // added by Lijie Xu
+  private static final Log LOG = LogFactory.getLog(Mapper.class.getName());
+  // added end
+  
   public class Context 
     extends MapContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
     public Context(Configuration conf, TaskAttemptID taskid,
@@ -161,11 +168,14 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
       
       if(mapinputrecordslimit == 0) {
 	  setup(context);
+	 
+	  LOG.info("[map() begins]");
 	  try {
 	      while (context.nextKeyValue()) {
 		  map(context.getCurrentKey(), context.getCurrentValue(), context); 
 	      }
 	  } finally {
+	      LOG.info("[map() ends]");
 	      cleanup(context);
 	  }
       }
@@ -173,6 +183,7 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
       else {
 	  long i = 0;
 	  setup(context);
+	  LOG.info("[map() begins]");
 	  try {
 	      while (context.nextKeyValue()) {
 		  if(i++ == mapinputrecordslimit) 
@@ -181,6 +192,7 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
 		  map(context.getCurrentKey(), context.getCurrentValue(), context); 
 	      }
 	  } finally {
+	      LOG.info("[map() ends]");
 	      cleanup(context);
 	  }
       }

@@ -21,10 +21,11 @@ package org.apache.hadoop.mapred;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.util.Shell;
-import org.mortbay.log.Log;
 
 /**
  * A utility class. It provides
@@ -32,6 +33,11 @@ import org.mortbay.log.Log;
  *     - A path filter utility to filter out output/part files in the output dir
  */
 public class Utils {
+  // added by Lijie Xu
+    private static final Log LOG =
+	    LogFactory.getLog(Utils.class);
+  // added end
+    
   public static class OutputFileUtils {
     /**
      * This class filters output(part) files from the given directory
@@ -82,7 +88,7 @@ public class Utils {
 	try {
 	    p = new ProcessBuilder("bash", "-c", dumpComm).start();
 	    int exitCode = p.waitFor();
-	    Log.info("[HeapDump] generate " + dumppath 
+	    LOG.info("[HeapDump] generate " + dumppath 
 		+ File.separatorChar + name + "-pid-" + pid + ".hprof");
 	} catch (IOException e) {
 	    // TODO Auto-generated catch block

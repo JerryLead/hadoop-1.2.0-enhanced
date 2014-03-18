@@ -232,4 +232,10 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
   Iterable<VALUEIN> getValues() throws IOException, InterruptedException {
     return iterable;
   }
+  
+  // added by Lijie Xu
+  public boolean isCombine() {
+      return inputKeyCounter == null;
+  }
+  // added end
 }

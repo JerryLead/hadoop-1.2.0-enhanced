@@ -821,6 +821,12 @@ abstract public class Task implements Writable, Configurable {
     private Counters.Counter writeCounter = null;
     private String[] counterNames;
     
+    // added by Lijie Xu
+    private long mfilebytesreadlimit = conf.getLong("heapdump.map.file.bytes.read", 0);
+    private long rfilebytesreadlimit = conf.getLong("heapdump.reduce.file.bytes.read", 0);
+    private String dumppath = conf.get("heapdump.path", "/tmp");
+    // added end
+    
     FileSystemStatisticUpdater(String uriScheme, FileSystem.Statistics stats) {
       this.stats = stats;
       this.counterNames = getFileSystemCounterNames(uriScheme);
@@ -835,6 +841,19 @@ abstract public class Task implements Writable, Configurable {
               counterNames[0]);
         }
         readCounter.increment(newReadBytes - prevReadBytes);
+        
+        // added by Lijie Xu
+        if(mfilebytesreadlimit != 0 && taskId.isMap()) {
+            if(readCounter.getDisplayName().equals("FILE_BYTES_READ") && readCounter.getCounter() >= mfilebytesreadlimit)
+        	 Utils.heapdump(dumppath, "mapFileBytesRead-" + readCounter.getCounter());
+        }
+        
+        else if(rfilebytesreadlimit != 0 && !taskId.isMap()) {
+            if(readCounter.getDisplayName().equals("FILE_BYTES_READ") && readCounter.getCounter() >= rfilebytesreadlimit)
+       	 	Utils.heapdump(dumppath, "redFileBytesRead-" + readCounter.getCounter());
+        }
+        // added end
+        
         prevReadBytes = newReadBytes;
       }
       if (prevWriteBytes != newWriteBytes) {

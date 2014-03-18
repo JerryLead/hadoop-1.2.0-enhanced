@@ -153,11 +153,12 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 	
     }
     
-    else {
+    else if(this.isCombine()){
 	if(inputValueCounter.getValue() == rcombineinputrecordslimit) 
 	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "rCombInRecords-" + rcombineinputrecordslimit);
-	  
-	
+    }
+    
+    else {
 	if(inputValueCounter.getValue() == reduceinputrecordslimit) 
 	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "redInRecords-" + reduceinputrecordslimit);
 	   

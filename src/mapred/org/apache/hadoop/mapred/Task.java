@@ -825,6 +825,8 @@ abstract public class Task implements Writable, Configurable {
     private long mfilebytesreadlimit = conf.getLong("heapdump.map.file.bytes.read", 0);
     private long rfilebytesreadlimit = conf.getLong("heapdump.reduce.file.bytes.read", 0);
     private String dumppath = conf.get("heapdump.path", "/tmp");
+    private boolean mDumped = false;
+    private boolean rDumped = false;
     // added end
     
     FileSystemStatisticUpdater(String uriScheme, FileSystem.Statistics stats) {
@@ -843,14 +845,20 @@ abstract public class Task implements Writable, Configurable {
         readCounter.increment(newReadBytes - prevReadBytes);
         
         // added by Lijie Xu
-        if(mfilebytesreadlimit != 0 && taskId.isMap()) {
-            if(readCounter.getDisplayName().equals("FILE_BYTES_READ") && readCounter.getCounter() >= mfilebytesreadlimit)
-        	 Utils.heapdump(dumppath, "mapFileBytesRead-" + readCounter.getCounter());
+        if(mfilebytesreadlimit != 0 && taskId.isMap() && mDumped == false) {
+            if(readCounter.getDisplayName().equals("FILE_BYTES_READ") && readCounter.getCounter() >= mfilebytesreadlimit) {
+        	Utils.heapdump(dumppath, "mapFileBytesRead-" + readCounter.getCounter());
+        	mDumped = true;
+            }
+        	
+            
         }
         
-        else if(rfilebytesreadlimit != 0 && !taskId.isMap()) {
-            if(readCounter.getDisplayName().equals("FILE_BYTES_READ") && readCounter.getCounter() >= rfilebytesreadlimit)
+        else if(rfilebytesreadlimit != 0 && !taskId.isMap() && rDumped == false) {
+            if(readCounter.getDisplayName().equals("FILE_BYTES_READ") && readCounter.getCounter() >= rfilebytesreadlimit) {
        	 	Utils.heapdump(dumppath, "redFileBytesRead-" + readCounter.getCounter());
+       	 	rDumped = true;
+            }
         }
         // added end
         

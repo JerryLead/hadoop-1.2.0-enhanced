@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.RawComparator;
@@ -190,6 +191,9 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
   public void run(Context context) throws IOException, InterruptedException {
       long[] reduceinputgroupslimits = Utils.parseHeapDumpConfs(context.getConfiguration().get("heapdump.reduce.input.groups"));
       
+      Set<String> profileTaskIds = Utils.parseTaskIds(context.getConfiguration().get("heapdump.task.attempt.ids"));
+      if(profileTaskIds != null && !profileTaskIds.contains(context.getTaskAttemptID().toString()))
+	  reduceinputgroupslimits = null;
       
       if(reduceinputgroupslimits != null && !((ReduceContext)context).isCombine()) {
 	  

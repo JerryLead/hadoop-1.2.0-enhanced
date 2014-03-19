@@ -427,7 +427,10 @@ class MapTask extends Task {
       ReflectionUtils.newInstance(job.getMapRunnerClass(), job);
 
     try {
-      runner.run(in, new OldOutputCollector(collector, conf), reporter);
+      // modified by Lijie Xu
+      runner.run(in, new OldOutputCollector(collector, conf), reporter, super.getTaskID());
+      // modified end
+      
       collector.flush();
       
       in.close();

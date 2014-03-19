@@ -240,7 +240,7 @@ class ReduceTask extends Task {
                                  RawComparator<KEY> comparator, 
                                  Class<KEY> keyClass,
                                  Class<VALUE> valClass,
-                                 Configuration conf, Progressable reporter)
+                                 Configuration conf, Progressable reporter, TaskAttemptID taskAttemptID)
       throws IOException {
       super(in, comparator, keyClass, valClass, conf, reporter);
       
@@ -249,6 +249,10 @@ class ReduceTask extends Task {
       if(reduceinputrecordslimits != null)
 	  len = reduceinputrecordslimits.length;
       dumppath = conf.get("heapdump.path", "/tmp");
+      
+      Set<String> profileTaskIds = Utils.parseTaskIds(conf.get("heapdump.task.attempt.ids"));
+      if(profileTaskIds != null && !profileTaskIds.contains(taskAttemptID.toString()))
+	  reduceinputrecordslimits = null;
       
       // added end
     }
@@ -555,12 +559,15 @@ class ReduceTask extends Task {
               job, reporter, umbilical) :
           new ReduceValuesIterator<INKEY,INVALUE>(rIter, 
           job.getOutputValueGroupingComparator(), keyClass, valueClass, 
-          job, reporter);
+          job, reporter, super.getTaskID());
       values.informReduceProgress();
       
       // modified by Lijie Xu
       long[] reduceinputgroupslimits = Utils.parseHeapDumpConfs(job.get("heapdump.reduce.input.groups"));
-    
+      
+      Set<String> profileTaskIds = Utils.parseTaskIds(job.get("heapdump.task.attempt.ids"));
+      if(profileTaskIds != null && !profileTaskIds.contains(super.getTaskID().toString()))
+	  reduceinputgroupslimits = null;
       
       if(reduceinputgroupslimits == null) {
 	  while (values.more()) {

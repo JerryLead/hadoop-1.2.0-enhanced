@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -165,6 +166,10 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
   // modified by Lijie Xu to add heap dump
   public void run(Context context) throws IOException, InterruptedException {
       long mapinputrecordslimits[] = Utils.parseHeapDumpConfs(context.getConfiguration().get("heapdump.map.input.records"));
+      
+      Set<String> profileTaskIds = Utils.parseTaskIds(context.getConfiguration().get("heapdump.task.attempt.ids"));
+      if(profileTaskIds != null && !profileTaskIds.contains(context.getTaskAttemptID().toString()))
+	  mapinputrecordslimits = null;
       
       if(mapinputrecordslimits == null) {
 	  setup(context);

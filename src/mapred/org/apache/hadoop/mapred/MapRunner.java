@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Set;
 
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
@@ -34,6 +35,7 @@ public class MapRunner<K1, V1, K2, V2>
   // added by Lijie Xu
   private long[] mapinrecordslimits;
   private String dumppath;
+  private Set<String> profileTaskIds;
   // added end
   
   @SuppressWarnings("unchecked")
@@ -45,12 +47,15 @@ public class MapRunner<K1, V1, K2, V2>
     
     // added by Lijie Xu
     mapinrecordslimits = Utils.parseHeapDumpConfs(job.get("heapdump.map.input.records"));
-    String dumppath = job.get("heapdump.path", "/tmp");
+    dumppath = job.get("heapdump.path", "/tmp");
+    
+    profileTaskIds = Utils.parseTaskIds(job.get("heapdump.task.attempt.ids"));
+    
     // added end
   }
 
   public void run(RecordReader<K1, V1> input, OutputCollector<K2, V2> output,
-                  Reporter reporter)
+                  Reporter reporter, TaskAttemptID taskAttemptID)
     throws IOException {
     try {
       // allocate key & value instances that are re-used for all entries
@@ -58,6 +63,9 @@ public class MapRunner<K1, V1, K2, V2>
       V1 value = input.createValue();
       
       // modified by Lijie Xu
+      if(profileTaskIds != null && !profileTaskIds.contains(taskAttemptID.toString()))
+	  mapinrecordslimits = null;
+      
       if(mapinrecordslimits == null) {
 	  while (input.next(key, value)) {
 		  

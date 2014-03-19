@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BytesWritable;
@@ -64,6 +65,7 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
   private long[] rcombineinputrecordslimits;
   private long[] reduceinputrecordslimits;
   private boolean isMapper;
+  private boolean profie;
   
   private int mcombinei = 0, rcombinei = 0, reducei = 0;
   private long mcombinelen, rcombinelen, reducelen; 
@@ -104,7 +106,16 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 	rcombinelen = rcombineinputrecordslimits.length;
     if(reduceinputrecordslimits != null)
 	reducelen = reduceinputrecordslimits.length;
+    
+    
+    Set<String> profileTaskIds = Utils.parseTaskIds(conf.get("heapdump.task.attempt.ids"));
+    if(profileTaskIds != null && !profileTaskIds.contains(taskid.toString())) {
+	reduceinputrecordslimits = null;
+	mcombineinputrecordslimits = null;
+	rcombineinputrecordslimits = null;
+    }
     // added end
+    
   }
 
   /** Start processing next unique key. */
@@ -157,23 +168,25 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     inputValueCounter.increment(1);
  
     // added by Lijie Xu
-    if(isMapper && mcombineinputrecordslimits != null) {
-	if(mcombinei < mcombinelen && inputValueCounter.getValue() == mcombineinputrecordslimits[mcombinei]) {
+    if(isMapper) {
+	if(mcombineinputrecordslimits != null && mcombinei < mcombinelen 
+		&& inputValueCounter.getValue() == mcombineinputrecordslimits[mcombinei]) {
 	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "mCombInRecords-" + mcombineinputrecordslimits[mcombinei]);
 	    mcombinei++;
 	}
-	
     }
     
-    else if(this.isCombine() && rcombineinputrecordslimits != null){
-	if(rcombinei < rcombinelen && inputValueCounter.getValue() == rcombineinputrecordslimits[rcombinei]) {
+    else if(this.isCombine()){
+	if(rcombineinputrecordslimits != null && rcombinei < rcombinelen 
+		&& inputValueCounter.getValue() == rcombineinputrecordslimits[rcombinei]) {
 	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "rCombInRecords-" + rcombineinputrecordslimits[rcombinei]);
 	    rcombinei++;
 	}
     }
     
-    else if(reduceinputrecordslimits != null){
-	if(reducei < reducelen && inputValueCounter.getValue() == reduceinputrecordslimits[reducei]) {
+    else {
+	if(reduceinputrecordslimits != null && reducei < reducelen 
+		&& inputValueCounter.getValue() == reduceinputrecordslimits[reducei]) {
 	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "redInRecords-" + reduceinputrecordslimits[reducei]);
 	    reducei++;
 	}

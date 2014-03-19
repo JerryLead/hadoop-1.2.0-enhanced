@@ -40,9 +40,10 @@ public interface MapRunnable<K1, V1, K2, V2>
    * @param input the {@link RecordReader} to read the input records.
    * @param output the {@link OutputCollector} to collect the outputrecords.
    * @param reporter {@link Reporter} to report progress, status-updates etc.
+ * @param taskAttemptID 
    * @throws IOException
    */
   void run(RecordReader<K1, V1> input, OutputCollector<K2, V2> output,
-           Reporter reporter)
+           Reporter reporter, TaskAttemptID taskAttemptID)
     throws IOException;
 }

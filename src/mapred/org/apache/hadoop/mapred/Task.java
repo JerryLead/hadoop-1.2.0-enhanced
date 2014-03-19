@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.crypto.SecretKey;
@@ -844,6 +845,12 @@ abstract public class Task implements Writable, Configurable {
 	  mlen = mfilebytesreadlimits.length;
       if(rfilebytesreadlimits != null)
 	  rlen = rfilebytesreadlimits.length;
+      
+      Set<String> profileTaskIds = Utils.parseTaskIds(conf.get("heapdump.task.attempt.ids"));
+      if(profileTaskIds != null && !profileTaskIds.contains(taskId.toString())) {
+	  mfilebytesreadlimits = null;
+	  rfilebytesreadlimits = null;
+      }
       // added end
     }
 
@@ -1416,7 +1423,7 @@ abstract public class Task implements Writable, Configurable {
     public CombineValuesIterator(RawKeyValueIterator in,
         RawComparator<KEY> comparator, Class<KEY> keyClass,
         Class<VALUE> valClass, Configuration conf, Reporter reporter,
-        Counters.Counter combineInputCounter, boolean isMapper) throws IOException {
+        Counters.Counter combineInputCounter, boolean isMapper, TaskAttemptID taskId) throws IOException {
       super(in, comparator, keyClass, valClass, conf, reporter);
       this.combineInputCounter = combineInputCounter;
       
@@ -1430,6 +1437,13 @@ abstract public class Task implements Writable, Configurable {
 	  rlen = rcombineinputrecordslimits.length;
       this.dumppath = conf.get("heapdump.path", "/tmp");
       this.isMapper = isMapper;
+      
+      Set<String> profileTaskIds = Utils.parseTaskIds(conf.get("heapdump.task.attempt.ids"));
+      if(profileTaskIds != null && !profileTaskIds.contains(taskId.toString())) {
+	  mcombineinputrecordslimits = null;
+	  rcombineinputrecordslimits = null;
+      }
+
       // added end
     }
     // modified end
@@ -1548,7 +1562,7 @@ abstract public class Task implements Writable, Configurable {
 
       if (cls != null) {
 	// modified by Lijie Xu
-        return new OldCombinerRunner(cls, job, inputCounter, reporter, taskId.isMap());
+        return new OldCombinerRunner(cls, job, inputCounter, reporter, taskId.isMap(), taskId);
         // modified end
       }
       // make a task context so we can get the classes
@@ -1574,6 +1588,7 @@ abstract public class Task implements Writable, Configurable {
     
     // added by Lijie Xu
     private boolean isMapper;
+    private TaskAttemptID taskId;
     // added end
 
     // modified by Lijie Xu
@@ -1581,7 +1596,7 @@ abstract public class Task implements Writable, Configurable {
     protected OldCombinerRunner(Class<? extends Reducer<K,V,K,V>> cls,
                                 JobConf conf,
                                 Counters.Counter inputCounter,
-                                TaskReporter reporter, boolean isMapper) {
+                                TaskReporter reporter, boolean isMapper, TaskAttemptID taskId) {
       super(inputCounter, conf, reporter);
       combinerClass = cls;
       keyClass = (Class<K>) job.getMapOutputKeyClass();
@@ -1589,6 +1604,7 @@ abstract public class Task implements Writable, Configurable {
       comparator = (RawComparator<K>) job.getOutputKeyComparator();
       
       this.isMapper = isMapper;
+      this.taskId = taskId;
     }
     // modified end
 
@@ -1603,7 +1619,7 @@ abstract public class Task implements Writable, Configurable {
         CombineValuesIterator<K,V> values = 
           new CombineValuesIterator<K,V>(kvIter, comparator, keyClass, 
                                          valueClass, job, Reporter.NULL,
-                                         inputCounter, isMapper);
+                                         inputCounter, isMapper, taskId);
         // modified end
         while (values.more()) {
           combiner.reduce(values.getKey(), values, combineCollector,

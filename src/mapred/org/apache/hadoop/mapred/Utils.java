@@ -20,6 +20,8 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -112,6 +114,14 @@ public class Utils {
 	  }
 	  return values;
       }
+  }
+  
+  public static Set<String> parseTaskIds(String tasksIdsConf) {
+      Set<String> s = new HashSet<String>();
+      String[] ids = tasksIdsConf.split(",");
+      for(String id: ids)
+	  s.add(id);
+      return s;
   }
   
   // added end

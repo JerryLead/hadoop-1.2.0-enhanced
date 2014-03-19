@@ -298,7 +298,7 @@ class ReduceTask extends Task {
          RawComparator<KEY> comparator, Class<KEY> keyClass,
          Class<VALUE> valClass, Configuration conf, TaskReporter reporter,
          TaskUmbilicalProtocol umbilical) throws IOException {
-       super(in, comparator, keyClass, valClass, conf, reporter);
+       super(in, comparator, keyClass, valClass, conf, reporter, null);
        this.umbilical = umbilical;
        this.skipGroupCounter = 
          reporter.getCounter(Counter.REDUCE_SKIPPED_GROUPS);

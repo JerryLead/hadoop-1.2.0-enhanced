@@ -117,6 +117,8 @@ public class Utils {
   }
   
   public static Set<String> parseTaskIds(String tasksIdsConf) {
+      if(tasksIdsConf == null)
+	  return null;
       Set<String> s = new HashSet<String>();
       String[] ids = tasksIdsConf.split(",");
       for(String id: ids)

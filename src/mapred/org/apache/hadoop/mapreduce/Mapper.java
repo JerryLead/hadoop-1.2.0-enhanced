@@ -164,9 +164,9 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
   */
   // modified by Lijie Xu to add heap dump
   public void run(Context context) throws IOException, InterruptedException {
-      long mapinputrecordslimit = context.getConfiguration().getLong("heapdump.map.input.records", 0);
+      long mapinputrecordslimits[] = Utils.parseHeapDumpConfs(context.getConfiguration().get("heapdump.map.input.records"));
       
-      if(mapinputrecordslimit == 0) {
+      if(mapinputrecordslimits == null) {
 	  setup(context);
 	 
 	  LOG.info("[map() begins]");
@@ -181,14 +181,18 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
       }
       
       else {
-	  long i = 0;
+	  long record = 0;
+	  int i = 0;
+	  int lcount = mapinputrecordslimits.length;
+	  
 	  setup(context);
 	  LOG.info("[map() begins]");
 	  try {
 	      while (context.nextKeyValue()) {
-		  if(i++ == mapinputrecordslimit) 
-		      Utils.heapdump(context.getConfiguration().get("heapdump.path", "/tmp"), "mapInRecords-" + i);
-		     
+		  if(i < lcount && record++ == mapinputrecordslimits[i]) {
+		      Utils.heapdump(context.getConfiguration().get("heapdump.path", "/tmp"), "mapInRecords-" + record);
+		      i++;
+		  }
 		  map(context.getCurrentKey(), context.getCurrentValue(), context); 
 	      }
 	  } finally {

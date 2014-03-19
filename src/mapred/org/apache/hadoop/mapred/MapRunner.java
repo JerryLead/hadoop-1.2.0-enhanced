@@ -32,7 +32,7 @@ public class MapRunner<K1, V1, K2, V2>
   private boolean incrProcCount;
   
   // added by Lijie Xu
-  private long mapinrecordslimit;
+  private long[] mapinrecordslimits;
   private String dumppath;
   // added end
   
@@ -44,7 +44,7 @@ public class MapRunner<K1, V1, K2, V2>
       SkipBadRecords.getAutoIncrMapperProcCount(job);
     
     // added by Lijie Xu
-    mapinrecordslimit = job.getLong("heapdump.map.input.records", 0);
+    mapinrecordslimits = Utils.parseHeapDumpConfs(job.get("heapdump.map.input.records"));
     String dumppath = job.get("heapdump.path", "/tmp");
     // added end
   }
@@ -57,12 +57,8 @@ public class MapRunner<K1, V1, K2, V2>
       K1 key = input.createKey();
       V1 value = input.createValue();
       
-      // added by Lijie Xu
-      long i = 1;
-      // added end
-      
       // modified by Lijie Xu
-      if(mapinrecordslimit == 0) {
+      if(mapinrecordslimits == null) {
 	  while (input.next(key, value)) {
 		  
 	        // map pair to output
@@ -74,9 +70,15 @@ public class MapRunner<K1, V1, K2, V2>
 	  } 
       }
       else {
+	  // added by Lijie Xu
+	  int i = 0;
+	  long record = 1;
+	  int lcount = mapinrecordslimits.length;
+	  // added end
+	  
 	  while (input.next(key, value)) {
-		if(i++ == mapinrecordslimit) 
-		    Utils.heapdump(dumppath, "mapInRecords-" + mapinrecordslimit);
+		if(i < lcount && record++ == mapinrecordslimits[i]) 
+		    Utils.heapdump(dumppath, "mapInRecords-" + mapinrecordslimits[i]);
 
 	        // map pair to output
 	        mapper.map(key, value, output, reporter);

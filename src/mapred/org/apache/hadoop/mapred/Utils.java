@@ -68,7 +68,7 @@ public class Utils {
     }
   }
   
-  
+  // added by Lijie Xu
   public static void heapdump(String dumppath, String name) {
 	String pid = "";
 
@@ -100,5 +100,20 @@ public class Utils {
 	    p.destroy();
 	}		     		
   }
+  
+  public static long[] parseHeapDumpConfs(String heapDumpConf) {
+      if(heapDumpConf == null) 
+	  return null;
+      else {
+	  String[] limits = heapDumpConf.split(",");
+	  long[] values = new long[limits.length];
+	  for(int i = 0; i < limits.length; i++) {
+	      values[i] = Long.parseLong(limits[i]);
+	  }
+	  return values;
+      }
+  }
+  
+  // added end
 }
 

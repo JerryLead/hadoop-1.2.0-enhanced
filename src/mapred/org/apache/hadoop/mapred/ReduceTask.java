@@ -231,7 +231,9 @@ class ReduceTask extends Task {
   private class ReduceValuesIterator<KEY,VALUE> 
           extends ValuesIterator<KEY,VALUE> {
     // added by Lijie Xu
-    private long reduceinputrecordslimit;
+    private long[] reduceinputrecordslimits;
+    private int i = 0;
+    private int len;
     private String dumppath;
     // added end
     public ReduceValuesIterator (RawKeyValueIterator in,
@@ -243,7 +245,9 @@ class ReduceTask extends Task {
       super(in, comparator, keyClass, valClass, conf, reporter);
       
       // added by Lijie Xu
-      reduceinputrecordslimit = conf.getLong("heapdump.reduce.input.records", 0);
+      reduceinputrecordslimits = Utils.parseHeapDumpConfs(conf.get("heapdump.reduce.input.records"));
+      if(reduceinputrecordslimits != null)
+	  len = reduceinputrecordslimits.length;
       dumppath = conf.get("heapdump.path", "/tmp");
       
       // added end
@@ -253,8 +257,9 @@ class ReduceTask extends Task {
     public VALUE next() {
       reduceInputValueCounter.increment(1);
       // added by Lijie Xu
-      if(reduceInputValueCounter.getCounter() == reduceinputrecordslimit) {
-	  Utils.heapdump(dumppath, "redInRecords-" + reduceinputrecordslimit);
+      if(reduceinputrecordslimits != null && i < len && reduceInputValueCounter.getCounter() == reduceinputrecordslimits[i]) {
+	  Utils.heapdump(dumppath, "redInRecords-" + reduceinputrecordslimits[i]);
+	  i++;
       }
 	  
       // added end
@@ -554,8 +559,10 @@ class ReduceTask extends Task {
       values.informReduceProgress();
       
       // modified by Lijie Xu
-      long reduceinputgroupslimit = job.getLong("heapdump.reduce.input.groups", 0);
-      if(reduceinputgroupslimit == 0) {
+      long[] reduceinputgroupslimits = Utils.parseHeapDumpConfs(job.get("heapdump.reduce.input.groups"));
+    
+      
+      if(reduceinputgroupslimits == null) {
 	  while (values.more()) {
 	        reduceInputKeyCounter.increment(1);
 	        reducer.reduce(values.getKey(), values, collector, reporter);
@@ -569,11 +576,14 @@ class ReduceTask extends Task {
       
       }
       else {
+	  int i = 0;
+	  int len = reduceinputgroupslimits.length;
+	      
 	  while (values.more()) {
 	        reduceInputKeyCounter.increment(1);
-	        if(reduceInputKeyCounter.getValue() == reduceinputgroupslimit) {
-	            Utils.heapdump(job.get("heapdump.path", "/tmp"), "redInGroups-" + reduceinputgroupslimit);	     
-		    break; 
+	        if(i < len && reduceInputKeyCounter.getValue() == reduceinputgroupslimits[i]) {
+	            Utils.heapdump(job.get("heapdump.path", "/tmp"), "redInGroups-" + reduceinputgroupslimits[i]);	     
+		    i++;
 	        }
 	     
 	        reducer.reduce(values.getKey(), values, collector, reporter);

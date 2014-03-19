@@ -60,10 +60,13 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
   private ValueIterable iterable = new ValueIterable();
 
   // added by Lijie Xu
-  private long reduceinputrecordslimit;
-  private long mcombineinputrecordslimit;
-  private long rcombineinputrecordslimit;
+  private long[] mcombineinputrecordslimits;
+  private long[] rcombineinputrecordslimits;
+  private long[] reduceinputrecordslimits;
   private boolean isMapper;
+  
+  private int mcombinei = 0, rcombinei = 0, reducei = 0;
+  private long mcombinelen, rcombinelen, reducelen; 
   // added end
   
   public ReduceContext(Configuration conf, TaskAttemptID taskid,
@@ -90,10 +93,17 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     hasMore = input.next();
     
     // added by Lijie Xu
-    reduceinputrecordslimit = conf.getLong("heapdump.reduce.input.records", 0);
-    mcombineinputrecordslimit = conf.getLong("heapdump.map.combine.input.records", 0);
-    rcombineinputrecordslimit = conf.getLong("heapdump.reduce.combine.input.records", 0);
+    reduceinputrecordslimits = Utils.parseHeapDumpConfs(conf.get("heapdump.reduce.input.records"));
+    mcombineinputrecordslimits = Utils.parseHeapDumpConfs(conf.get("heapdump.map.combine.input.records"));
+    rcombineinputrecordslimits = Utils.parseHeapDumpConfs(conf.get("heapdump.reduce.combine.input.records"));
     isMapper = taskid.isMap();
+    
+    if(mcombineinputrecordslimits != null)
+	mcombinelen = mcombineinputrecordslimits.length;
+    if(rcombineinputrecordslimits != null)
+	rcombinelen = rcombineinputrecordslimits.length;
+    if(reduceinputrecordslimits != null)
+	reducelen = reduceinputrecordslimits.length;
     // added end
   }
 
@@ -147,20 +157,26 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     inputValueCounter.increment(1);
  
     // added by Lijie Xu
-    if(isMapper) {
-	if(inputValueCounter.getValue() == mcombineinputrecordslimit) 
-	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "mCombInRecords-" + mcombineinputrecordslimit);
+    if(isMapper && mcombineinputrecordslimits != null) {
+	if(mcombinei < mcombinelen && inputValueCounter.getValue() == mcombineinputrecordslimits[mcombinei]) {
+	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "mCombInRecords-" + mcombineinputrecordslimits[mcombinei]);
+	    mcombinei++;
+	}
 	
     }
     
-    else if(this.isCombine()){
-	if(inputValueCounter.getValue() == rcombineinputrecordslimit) 
-	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "rCombInRecords-" + rcombineinputrecordslimit);
+    else if(this.isCombine() && rcombineinputrecordslimits != null){
+	if(rcombinei < rcombinelen && inputValueCounter.getValue() == rcombineinputrecordslimits[rcombinei]) {
+	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "rCombInRecords-" + rcombineinputrecordslimits[rcombinei]);
+	    rcombinei++;
+	}
     }
     
-    else {
-	if(inputValueCounter.getValue() == reduceinputrecordslimit) 
-	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "redInRecords-" + reduceinputrecordslimit);
+    else if(reduceinputrecordslimits != null){
+	if(reducei < reducelen && inputValueCounter.getValue() == reduceinputrecordslimits[reducei]) {
+	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "redInRecords-" + reduceinputrecordslimits[reducei]);
+	    reducei++;
+	}
 	   
     } 
     // added end

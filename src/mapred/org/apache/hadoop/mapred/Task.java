@@ -822,16 +822,29 @@ abstract public class Task implements Writable, Configurable {
     private String[] counterNames;
     
     // added by Lijie Xu
-    private long mfilebytesreadlimit = conf.getLong("heapdump.map.file.bytes.read", 0);
-    private long rfilebytesreadlimit = conf.getLong("heapdump.reduce.file.bytes.read", 0);
-    private String dumppath = conf.get("heapdump.path", "/tmp");
-    private boolean mDumped = false;
-    private boolean rDumped = false;
+    private long[] mfilebytesreadlimits;
+    private long[] rfilebytesreadlimits;
+    private String dumppath; 
+    private int mi = 0, ri = 0;
+    private int mlen, rlen;
+    //private boolean mDumped = false;
+    //private boolean rDumped = false;
     // added end
     
     FileSystemStatisticUpdater(String uriScheme, FileSystem.Statistics stats) {
       this.stats = stats;
       this.counterNames = getFileSystemCounterNames(uriScheme);
+      
+      // added by Lijie Xu
+      mfilebytesreadlimits = Utils.parseHeapDumpConfs(conf.get("heapdump.map.file.bytes.read"));
+      rfilebytesreadlimits = Utils.parseHeapDumpConfs(conf.get("heapdump.reduce.file.bytes.read"));
+      dumppath = conf.get("heapdump.path", "/tmp");
+      
+      if(mfilebytesreadlimits != null)
+	  mlen = mfilebytesreadlimits.length;
+      if(rfilebytesreadlimits != null)
+	  rlen = rfilebytesreadlimits.length;
+      // added end
     }
 
     void updateCounters() {
@@ -845,19 +858,27 @@ abstract public class Task implements Writable, Configurable {
         readCounter.increment(newReadBytes - prevReadBytes);
         
         // added by Lijie Xu
-        if(mfilebytesreadlimit != 0 && taskId.isMap() && mDumped == false) {
-            if(readCounter.getDisplayName().equals("FILE_BYTES_READ") && readCounter.getCounter() >= mfilebytesreadlimit) {
+        if(mfilebytesreadlimits != null && taskId.isMap()) {
+            if(readCounter.getDisplayName().equals("FILE_BYTES_READ") && mi < mlen 
+        	    && readCounter.getCounter() >= mfilebytesreadlimits[mi]) {
         	Utils.heapdump(dumppath, "mapFileBytesRead-" + readCounter.getCounter());
-        	mDumped = true;
+        	mi++;
+        	
+        	while(mi < mlen && readCounter.getCounter() >= mfilebytesreadlimits[mi])
+        	    mi++;
             }
         	
             
         }
         
-        else if(rfilebytesreadlimit != 0 && !taskId.isMap() && rDumped == false) {
-            if(readCounter.getDisplayName().equals("FILE_BYTES_READ") && readCounter.getCounter() >= rfilebytesreadlimit) {
-       	 	Utils.heapdump(dumppath, "redFileBytesRead-" + readCounter.getCounter());
-       	 	rDumped = true;
+        else if(rfilebytesreadlimits != null && !taskId.isMap()) {
+            if(readCounter.getDisplayName().equals("FILE_BYTES_READ") && ri < rlen
+        	    && readCounter.getCounter() >= rfilebytesreadlimits[ri]) {
+       	 	Utils.heapdump(dumppath, "redFileBytesRead-" + readCounter.getCounter());   	 	
+       	 	ri++;
+ 	
+       	 	while(ri < rlen && readCounter.getCounter() >= rfilebytesreadlimits[ri])
+       	 	    ri++;
             }
         }
         // added end
@@ -1382,10 +1403,13 @@ abstract public class Task implements Writable, Configurable {
     private final Counters.Counter combineInputCounter;
 
     // added by Lijie Xu
-    private long mcombineinputrecordslimit;
-    private long rcombineinputrecordslimit;
+    private long[] mcombineinputrecordslimits;
+    private long[] rcombineinputrecordslimits;
     private String dumppath;
     private boolean isMapper;
+    
+    private int mi = 0, ri = 0;
+    private long mlen, rlen;
     // added end
     
     // modified by Lijie Xu
@@ -1397,8 +1421,13 @@ abstract public class Task implements Writable, Configurable {
       this.combineInputCounter = combineInputCounter;
       
       // added by Lijie Xu
-      this.mcombineinputrecordslimit = conf.getLong("heapdump.map.combine.input.records", 0);
-      this.rcombineinputrecordslimit = conf.getLong("heapdump.reduce.combine.input.records", 0);
+      this.mcombineinputrecordslimits = Utils.parseHeapDumpConfs(conf.get("heapdump.map.combine.input.records"));
+      this.rcombineinputrecordslimits = Utils.parseHeapDumpConfs(conf.get("heapdump.reduce.combine.input.records"));
+      
+      if(mcombineinputrecordslimits != null)
+	  mlen = mcombineinputrecordslimits.length;
+      if(rcombineinputrecordslimits != null)
+	  rlen = rcombineinputrecordslimits.length;
       this.dumppath = conf.get("heapdump.path", "/tmp");
       this.isMapper = isMapper;
       // added end
@@ -1408,13 +1437,18 @@ abstract public class Task implements Writable, Configurable {
     public VALUE next() {
       combineInputCounter.increment(1);
       
-      if(isMapper) {
-	      Utils.heapdump(dumppath, "mCombInRecords-" + mcombineinputrecordslimit);
+      if(isMapper && mcombineinputrecordslimits != null) {
+	  if(mi < mlen && combineInputCounter.getCounter() == mcombineinputrecordslimits[mi]) {
+	      Utils.heapdump(dumppath, "mCombInRecords-" + mcombineinputrecordslimits[mi]);
+	      mi++;
+	  }
 
       }
-      else {
-	  if(combineInputCounter.getValue() == rcombineinputrecordslimit) 
-	      Utils.heapdump(dumppath, "rCombInRecords-" + rcombineinputrecordslimit);
+      else if(rcombineinputrecordslimits != null){
+	  if(ri < rlen && combineInputCounter.getCounter() == rcombineinputrecordslimits[ri]) {
+	      Utils.heapdump(dumppath, "rCombInRecords-" + rcombineinputrecordslimits[ri]);
+	      ri++;
+	  }
 
       }
       

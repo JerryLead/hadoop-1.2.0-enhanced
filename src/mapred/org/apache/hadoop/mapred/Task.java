@@ -847,7 +847,7 @@ abstract public class Task implements Writable, Configurable {
 	  rlen = rfilebytesreadlimits.length;
       
       Set<String> profileTaskIds = Utils.parseTaskIds(conf.get("heapdump.task.attempt.ids"));
-      if(profileTaskIds != null && !profileTaskIds.contains(taskId.toString())) {
+      if(profileTaskIds != null && !Utils.isSetContainsId(profileTaskIds, taskId.toString())) {
 	  mfilebytesreadlimits = null;
 	  rfilebytesreadlimits = null;
       }
@@ -1439,7 +1439,7 @@ abstract public class Task implements Writable, Configurable {
       this.isMapper = isMapper;
       
       Set<String> profileTaskIds = Utils.parseTaskIds(conf.get("heapdump.task.attempt.ids"));
-      if(profileTaskIds != null && !profileTaskIds.contains(taskId.toString())) {
+      if(profileTaskIds != null && !Utils.isSetContainsId(profileTaskIds, taskId.toString())) {
 	  mcombineinputrecordslimits = null;
 	  rcombineinputrecordslimits = null;
       }

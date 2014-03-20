@@ -192,7 +192,7 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
       long[] reduceinputgroupslimits = Utils.parseHeapDumpConfs(context.getConfiguration().get("heapdump.reduce.input.groups"));
       
       Set<String> profileTaskIds = Utils.parseTaskIds(context.getConfiguration().get("heapdump.task.attempt.ids"));
-      if(profileTaskIds != null && !profileTaskIds.contains(context.getTaskAttemptID().toString()))
+      if(profileTaskIds != null && !Utils.isSetContainsId(profileTaskIds, context.getTaskAttemptID().toString())) 
 	  reduceinputgroupslimits = null;
       
       if(reduceinputgroupslimits != null && !((ReduceContext)context).isCombine()) {

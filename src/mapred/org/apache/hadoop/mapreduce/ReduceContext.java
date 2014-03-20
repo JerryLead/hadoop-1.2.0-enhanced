@@ -109,7 +109,7 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     
     
     Set<String> profileTaskIds = Utils.parseTaskIds(conf.get("heapdump.task.attempt.ids"));
-    if(profileTaskIds != null && !profileTaskIds.contains(taskid.toString())) {
+    if(profileTaskIds != null && !Utils.isSetContainsId(profileTaskIds, taskid.toString())) {
 	reduceinputrecordslimits = null;
 	mcombineinputrecordslimits = null;
 	rcombineinputrecordslimits = null;

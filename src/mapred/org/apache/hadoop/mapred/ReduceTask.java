@@ -251,7 +251,7 @@ class ReduceTask extends Task {
       dumppath = conf.get("heapdump.path", "/tmp");
       
       Set<String> profileTaskIds = Utils.parseTaskIds(conf.get("heapdump.task.attempt.ids"));
-      if(profileTaskIds != null && !profileTaskIds.contains(taskAttemptID.toString()))
+      if(profileTaskIds != null && !Utils.isSetContainsId(profileTaskIds, taskAttemptID.toString()))
 	  reduceinputrecordslimits = null;
       
       // added end
@@ -566,7 +566,7 @@ class ReduceTask extends Task {
       long[] reduceinputgroupslimits = Utils.parseHeapDumpConfs(job.get("heapdump.reduce.input.groups"));
       
       Set<String> profileTaskIds = Utils.parseTaskIds(job.get("heapdump.task.attempt.ids"));
-      if(profileTaskIds != null && !profileTaskIds.contains(super.getTaskID().toString()))
+      if(profileTaskIds != null && !Utils.isSetContainsId(profileTaskIds, super.getTaskID().toString()))
 	  reduceinputgroupslimits = null;
       
       if(reduceinputgroupslimits == null) {

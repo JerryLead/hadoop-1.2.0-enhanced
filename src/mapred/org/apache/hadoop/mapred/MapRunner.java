@@ -63,7 +63,7 @@ public class MapRunner<K1, V1, K2, V2>
       V1 value = input.createValue();
       
       // modified by Lijie Xu
-      if(profileTaskIds != null && !profileTaskIds.contains(taskAttemptID.toString()))
+      if(profileTaskIds != null && !Utils.isSetContainsId(profileTaskIds, taskAttemptID.toString()))
 	  mapinrecordslimits = null;
       
       if(mapinrecordslimits == null) {

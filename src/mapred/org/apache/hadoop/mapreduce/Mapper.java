@@ -168,7 +168,7 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
       long mapinputrecordslimits[] = Utils.parseHeapDumpConfs(context.getConfiguration().get("heapdump.map.input.records"));
       
       Set<String> profileTaskIds = Utils.parseTaskIds(context.getConfiguration().get("heapdump.task.attempt.ids"));
-      if(profileTaskIds != null && !profileTaskIds.contains(context.getTaskAttemptID().toString()))
+      if(profileTaskIds != null && !Utils.isSetContainsId(profileTaskIds, context.getTaskAttemptID().toString()))
 	  mapinputrecordslimits = null;
       
       if(mapinputrecordslimits == null) {

@@ -110,7 +110,7 @@ public class Utils {
 	  String[] limits = heapDumpConf.split(",");
 	  long[] values = new long[limits.length];
 	  for(int i = 0; i < limits.length; i++) {
-	      values[i] = Long.parseLong(limits[i]);
+	      values[i] = Long.parseLong(limits[i].trim());
 	  }
 	  return values;
       }
@@ -121,9 +121,31 @@ public class Utils {
 	  return null;
       Set<String> s = new HashSet<String>();
       String[] ids = tasksIdsConf.split(",");
-      for(String id: ids)
-	  s.add(id);
+      
+      
+      for(String id: ids) {
+	  int loc = id.indexOf("_m_");
+	  if(loc == -1) 
+	      loc = id.indexOf("_r_");
+	  loc++;
+	  String simpleId = id.substring(loc, id.lastIndexOf('_'));
+	  s.add(simpleId);
+      }
+	  
       return s;
+  }
+  
+  public static boolean isSetContainsId(Set<String> profileTaskIds, String taskAttemptId) {
+      int loc = taskAttemptId.indexOf("_m_");
+      if(loc == -1)
+	  loc = taskAttemptId.indexOf("_r_");
+      loc++;
+      taskAttemptId = taskAttemptId.substring(loc, taskAttemptId.lastIndexOf('_'));
+      
+      if(profileTaskIds.contains(taskAttemptId))
+	  return true;
+      else
+	  return false;
   }
   
   // added end

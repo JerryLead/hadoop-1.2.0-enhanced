@@ -104,17 +104,53 @@ public class Utils {
   }
   
   public static long[] parseHeapDumpConfs(String heapDumpConf) {
-      if(heapDumpConf == null) 
-	  return null;
-      else {
-	  String[] limits = heapDumpConf.split(",");
-	  long[] values = new long[limits.length];
-	  for(int i = 0; i < limits.length; i++) {
-	      values[i] = Long.parseLong(limits[i].trim());
-	  }
-	  return values;
-      }
-  }
+	if (heapDumpConf == null)
+	    return null;
+	// 133,200,300[10] or 133200300[10]
+	else if(heapDumpConf.contains("[")) {
+	   int loc = heapDumpConf.indexOf('[');
+	   long maxValue = Long.parseLong(heapDumpConf.substring(0, loc).replaceAll(",", "").trim());
+	   int partition = Integer.parseInt(heapDumpConf.substring(loc + 1, 
+		   heapDumpConf.lastIndexOf(']')).replaceAll(",", "").trim());
+	   long interval = (long) (maxValue / partition);
+	   long[] values = new long[partition];
+	   
+	   for(int i = 0; i < partition - 1; i++) 
+	       values[i] = (i + 1) * interval;
+	   values[partition - 1] = maxValue;
+	   
+	   return values;
+	   
+	}
+	// 133,200,300{10,000,000} or 133200300{10000000}
+	else if(heapDumpConf.contains("{")) {
+	    int loc = heapDumpConf.indexOf('{');
+	    long maxValue = Long.parseLong(heapDumpConf.substring(0, loc).replaceAll(",", "").trim());
+	    long interval = Long.parseLong(heapDumpConf.substring(loc 
+		    + 1, heapDumpConf.lastIndexOf('}')).replaceAll(",", "").trim());
+	    int partition = (int) (maxValue / interval);
+	    if(interval * partition < maxValue)
+		partition++;
+	    long[] values = new long[partition];
+	    
+	    for(int i = 0; i < partition - 1; i++)
+		values[i] = (i + 1) * interval;
+	    values[partition - 1] = maxValue;
+	    
+	    return values;
+	    
+	    
+	}
+	else {
+	    String[] limits = heapDumpConf.split("(\\.|-|/|;)");
+	    long[] values = new long[limits.length];
+	    for (int i = 0; i < limits.length; i++) {
+		values[i] = Long.parseLong(limits[i].replaceAll(",", "").trim());
+	    }
+	    return values;
+	}
+
+   }
   
   public static Set<String> parseTaskIds(String tasksIdsConf) {
       if(tasksIdsConf == null)

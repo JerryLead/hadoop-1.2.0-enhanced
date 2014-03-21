@@ -490,7 +490,9 @@ abstract public class Task implements Writable, Configurable {
                                           ) throws IOException;
 
   /** The number of milliseconds between progress reports. */
+  // modified by Lijie Xu
   public static final int PROGRESS_INTERVAL = 3000;
+  // modified end
 
   private transient Progress taskProgress = new Progress();
 
@@ -558,6 +560,9 @@ abstract public class Task implements Writable, Configurable {
     private boolean done = true;
     private Object lock = new Object();
     
+    // added by Lijie Xu
+    private int progress_interval;
+    // added end
     /**
      * flag that indicates whether progress update needs to be sent to parent.
      * If true, it has been set. If false, it has been reset. 
@@ -570,6 +575,10 @@ abstract public class Task implements Writable, Configurable {
       this.umbilical = umbilical;
       this.taskProgress = taskProgress;
       this.jvmContext = jvmContext;
+      
+      // added by Lijie Xu
+      progress_interval = conf.getInt("task.reporter.update.ms", 3000);
+      // added end
     }
     // getters and setters for flag
     void setProgressFlag() {
@@ -687,7 +696,9 @@ abstract public class Task implements Writable, Configurable {
           try {
             synchronized(lock) {
               done = false;
-              lock.wait(PROGRESS_INTERVAL);
+              // modified by Lijie Xu
+              lock.wait(progress_interval);
+              // added end
               if (taskDone.get()) {
                 done = true;
                 lock.notify();

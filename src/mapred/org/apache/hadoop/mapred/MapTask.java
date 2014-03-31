@@ -932,7 +932,11 @@ class MapTask extends Task {
     private ArrayList<SpillRecord> indexCacheList;
     private int totalIndexCacheMemory;
     private static final int INDEX_CACHE_MEMORY_LIMIT = 1024 * 1024;
-
+    
+    // added by Lijie Xu
+    private int[] recordsInPartitions;
+    // added end
+    
     @SuppressWarnings("unchecked")
     public MapOutputBuffer(TaskUmbilicalProtocol umbilical, JobConf job,
                            TaskReporter reporter
@@ -942,6 +946,14 @@ class MapTask extends Task {
       localFs = FileSystem.getLocal(job);
       partitions = job.getNumReduceTasks();
        
+      // added by Lijie Xu
+      recordsInPartitions = new int[partitions];
+      for(int i = 0; i < partitions; i++) {
+	  recordsInPartitions[i] = 0;
+      }
+      // added end
+      
+      
       rfs = ((LocalFileSystem)localFs).getRaw();
 
       indexCacheList = new ArrayList<SpillRecord>();
@@ -1055,8 +1067,8 @@ class MapTask extends Task {
               ? kvnext - kvend > softRecordLimit
               : kvend - kvnext <= kvoffsets.length - softRecordLimit);
           if (kvstart == kvend && kvsoftlimit) {
-            LOG.info("Spilling map output: record full = " + kvsoftlimit);
-            startSpill();
+            //LOG.info("Spilling map output: record full = " + kvsoftlimit);
+            startSpill("record");
           }
           if (kvfull) {
             try {
@@ -1253,8 +1265,8 @@ class MapTask extends Task {
                   ? bufindex - bufend > softBufferLimit
                   : bufend - bufindex < bufvoid - softBufferLimit;
                 if (bufsoftlimit || (buffull && !wrap)) {
-                  LOG.info("Spilling map output: buffer full= " + bufsoftlimit);
-                  startSpill();
+                  //LOG.info("Spilling map output: buffer full= " + bufsoftlimit);
+                  startSpill("buffer");
                 }
               } else if (buffull && !wrap) {
                 // We have no buffered records, and this record is too large
@@ -1301,7 +1313,7 @@ class MapTask extends Task {
 
     public synchronized void flush() throws IOException, ClassNotFoundException,
                                             InterruptedException {
-      LOG.info("Starting flush of map output");
+      // LOG.info("Starting flush of map output");
       spillLock.lock();
       try {
         while (kvstart != kvend) {
@@ -1317,12 +1329,22 @@ class MapTask extends Task {
           bufend = bufmark;
           
         //added by LijieXu
-          LOG.info("bufstart = " + bufstart + "; bufend = " + bufmark +
-                  "; bufvoid = " + bufvoid);
-          LOG.info("kvstart = " + kvstart + "; kvend = " + kvindex +
-                  "; length = " + kvoffsets.length);
+//          LOG.info("bufstart = " + bufstart + "; bufend = " + bufmark +
+//                  "; bufvoid = " + bufvoid);
+//          LOG.info("kvstart = " + kvstart + "; kvend = " + kvindex +
+//                  "; length = " + kvoffsets.length);
           //added end
           
+          long size = (bufend >= bufstart
+	          ? bufend - bufstart
+	          : (bufvoid - bufstart) + bufend);
+          int endPosition = (kvend > kvstart)
+	          ? kvend
+	          : kvoffsets.length + kvend;
+          int records = endPosition - kvstart;
+  
+          LOG.info("Spilling map output: reason = flush" + ", records = " + records + ", bytes = " + size);
+      
           sortAndSpill(true);
         }
       } catch (InterruptedException e) {
@@ -1395,13 +1417,28 @@ class MapTask extends Task {
       }
     }
 
-    private synchronized void startSpill() {
-      LOG.info("bufstart = " + bufstart + "; bufend = " + bufmark +
-               "; bufvoid = " + bufvoid);
-      LOG.info("kvstart = " + kvstart + "; kvend = " + kvindex +
-               "; length = " + kvoffsets.length);
+    private synchronized void startSpill(String full) {   
+      
+//      LOG.info("bufstart = " + bufstart + "; bufend = " + bufmark +
+//               "; bufvoid = " + bufvoid);
+//      LOG.info("kvstart = " + kvstart + "; kvend = " + kvindex +
+//               "; length = " + kvoffsets.length);
+
+      // modified by Lijie Xu
       kvend = kvindex;
       bufend = bufmark;
+      
+      long size = (bufend >= bufstart
+	          ? bufend - bufstart
+	          : (bufvoid - bufstart) + bufend);
+      int endPosition = (kvend > kvstart)
+	          ? kvend
+	          : kvoffsets.length + kvend;
+      int records = endPosition - kvstart;
+  
+      LOG.info("Spilling map output: reason = " + full + ", records = " + records + ", bytes = " + size);
+      
+      // modified end
       spillReady.signal();
     }
     
@@ -1439,11 +1476,11 @@ class MapTask extends Task {
         for (int i = 0; i < partitions; ++i) {
         	
         //added by LijieXu
-          long flush_rawLength = 0;
-          long flush_compressedLength = 0;
           long flush_CombineCounter = 0;
           long flush_records = spindex;
             
+          int currentStartPos = spindex;
+          
           if(isFlush && numSpills == 0)
           	flush_CombineCounter = combineOutputCounter.getCounter();
         //added end
@@ -1524,7 +1561,10 @@ class MapTask extends Task {
             }
            
             rawLengthOneSpill += rec.rawLength;
-            compressedLengthOneSpill += rec.partLength;     
+            compressedLengthOneSpill += rec.partLength;   
+            
+            int recordsInThisPartition = spindex - currentStartPos;
+            recordsInPartitions[i] += recordsInThisPartition;
             //added end
             
           } finally {
@@ -1793,7 +1833,7 @@ class MapTask extends Task {
           }
 
           //added by LijieXu
-          LOG.info("[BeforeMerge][Partition " + parts+ "]" + "<SegmentsNum = " + segmentList.size() + ", RawLength = " + rawLength + ", CompressedLength = " + compressedLength + ">");
+          LOG.info("[BeforeMerge][Partition " + parts+ "]" + "<SegmentsNum = " + segmentList.size() + ", records = " + recordsInPartitions[parts] + ", RawLength = " + rawLength + ", CompressedLength = " + compressedLength + ">");
           //added end
           
           //merge

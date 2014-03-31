@@ -2656,6 +2656,16 @@ class ReduceTask extends Task {
       int inMemSegmentsNum = finalSegments.size();
       //modified end
       
+      // added by Lijie Xu
+      StringBuilder sb = new StringBuilder();
+      for(int i = 0; i < finalSegments.size(); i++) {
+          sb.append(finalSegments.get(i).getTaskId());
+          if(i != finalSegments.size() - 1)
+    	  sb.append(", ");
+      }
+      String segmentsInReduceBufferIds = sb.toString();
+      // added end
+      
       if (0 != onDiskBytes) {
         final int numInMemSegments = memDiskSegments.size();
         diskSegments.addAll(0, memDiskSegments);
@@ -2682,13 +2692,18 @@ class ReduceTask extends Task {
         if (0 == finalSegments.size()) {
           return diskMerge;
         }
+        
+        
+        
         finalSegments.add(new Segment<K,V>(
               new RawKVIteratorReader(diskMerge, onDiskBytes), true, totalDecompressedBytes));
       }
       
       //added by LijieXu
+      
+      
       LOG.info("[FinalSortMerge]" + "<InMemorySegmentsNum = " + inMemSegmentsNum + ", "
-    		  	+ "InMemorySegmentsSize = " + inMemBytes + ">");
+    		  	+ "InMemorySegmentsSize = " + inMemBytes + "> TaskIdsInReduceBuffer(" + segmentsInReduceBufferIds + ")");
       //added end
       
     //modified by LijieXu modify spilledRecordsCounter form readsCounter to writesCounter
@@ -3000,7 +3015,16 @@ class ReduceTask extends Task {
         long decompressedBytesWritten;
         RawKeyValueIterator rIter = null;
         try {
-          LOG.info("[InMemoryShuffleMerge begins]");
+          // added by Lijie Xu
+          StringBuilder sb = new StringBuilder();
+          for(int i = 0; i < inMemorySegments.size(); i++) {
+              sb.append(inMemorySegments.get(i).getTaskId());
+              if(i != inMemorySegments.size() - 1)
+        	  sb.append(", ");
+          }
+     
+          LOG.info("[InMemoryShuffleMerge begins] TaskIds(" + sb.toString() + ")");
+          // added end
           LOG.info("Initiating in-memory merge with " + noInMemorySegments + 
                    " segments...");
           

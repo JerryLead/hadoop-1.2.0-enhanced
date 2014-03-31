@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.mapred.IFile.InMemoryReader;
 import org.apache.hadoop.mapred.IFile.Reader;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.util.PriorityQueue;
@@ -249,6 +250,18 @@ class Merger {
     public long getPosition() throws IOException {
       return reader.getPosition();
     }
+    
+    // added by Lijie Xu
+    int getTaskId() {
+	if(reader instanceof InMemoryReader) {
+	    String id = ((InMemoryReader) reader).taskAttemptId.toString();
+	    int mapperId = Integer.parseInt(id.substring(id.lastIndexOf('m') + 2, id.lastIndexOf('_')));
+	    return mapperId;
+	}
+	   
+	return -1;
+    }
+    // added end
   }
   
   private static class MergeQueue<K extends Object, V extends Object> 

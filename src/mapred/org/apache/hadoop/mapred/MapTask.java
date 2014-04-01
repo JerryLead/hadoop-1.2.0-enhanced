@@ -934,7 +934,7 @@ class MapTask extends Task {
     private static final int INDEX_CACHE_MEMORY_LIMIT = 1024 * 1024;
     
     // added by Lijie Xu
-    private int[] recordsInPartitions;
+    private long[] recordsInPartitions;
     // added end
     
     @SuppressWarnings("unchecked")
@@ -947,7 +947,7 @@ class MapTask extends Task {
       partitions = job.getNumReduceTasks();
        
       // added by Lijie Xu
-      recordsInPartitions = new int[partitions];
+      recordsInPartitions = new long[partitions];
       for(int i = 0; i < partitions; i++) {
 	  recordsInPartitions[i] = 0;
       }
@@ -1343,7 +1343,7 @@ class MapTask extends Task {
 	          : kvoffsets.length + kvend;
           int records = endPosition - kvstart;
   
-          LOG.info("Spilling map output: reason = flush" + ", records = " + records + ", bytes = " + size);
+          LOG.info("Spilling map output: full = flush" + ", records = " + records + ", bytes = " + size);
       
           sortAndSpill(true);
         }
@@ -1436,7 +1436,7 @@ class MapTask extends Task {
 	          : kvoffsets.length + kvend;
       int records = endPosition - kvstart;
   
-      LOG.info("Spilling map output: reason = " + full + ", records = " + records + ", bytes = " + size);
+      LOG.info("Spilling map output: full = " + full + ", records = " + records + ", bytes = " + size);
       
       // modified end
       spillReady.signal();
@@ -1532,11 +1532,12 @@ class MapTask extends Task {
 
             writer = null;
             
+            long RecordsAfterCombine = -1;
           //added by LijieXu
             if(isFlush && numSpills == 0) {
             	long RecordsBeforeCombine = spindex - flush_records;
             	//long RawLengthBeforeMerge = rec.rawLength;
-            	long RecordsAfterCombine; 
+            	 
             	if(combinerRunner == null)
             		RecordsAfterCombine = RecordsBeforeCombine;
             	else {
@@ -1563,7 +1564,8 @@ class MapTask extends Task {
             rawLengthOneSpill += rec.rawLength;
             compressedLengthOneSpill += rec.partLength;   
             
-            int recordsInThisPartition = spindex - currentStartPos;
+            long recordsInThisPartition = RecordsAfterCombine == -1 ? spindex - currentStartPos : RecordsAfterCombine;
+           
             recordsInPartitions[i] += recordsInThisPartition;
             //added end
             
@@ -1833,7 +1835,9 @@ class MapTask extends Task {
           }
 
           //added by LijieXu
-          LOG.info("[BeforeMerge][Partition " + parts+ "]" + "<SegmentsNum = " + segmentList.size() + ", records = " + recordsInPartitions[parts] + ", RawLength = " + rawLength + ", CompressedLength = " + compressedLength + ">");
+          LOG.info("[BeforeMerge][Partition " + parts+ "]" + "<SegmentsNum = " + segmentList.size() 
+        	  + ", records = " + recordsInPartitions[parts] + ", RawLength = " + rawLength 
+        	  + ", CompressedLength = " + compressedLength + ">");
           //added end
           
           //merge

@@ -1471,6 +1471,8 @@ class MapTask extends Task {
         long rawLengthOneSpill = 0;
         long compressedLengthOneSpill = 0;
         long currentCombineCounter = combineOutputCounter.getCounter();
+        
+        long partitionCombineCounter = combineOutputCounter.getCounter();
         //added end
         
         for (int i = 0; i < partitions; ++i) {
@@ -1532,11 +1534,12 @@ class MapTask extends Task {
 
             writer = null;
             
-            long RecordsAfterCombine = -1;
+            
           //added by LijieXu
             if(isFlush && numSpills == 0) {
             	long RecordsBeforeCombine = spindex - flush_records;
             	//long RawLengthBeforeMerge = rec.rawLength;
+            	long RecordsAfterCombine;
             	 
             	if(combinerRunner == null)
             		RecordsAfterCombine = RecordsBeforeCombine;
@@ -1564,7 +1567,12 @@ class MapTask extends Task {
             rawLengthOneSpill += rec.rawLength;
             compressedLengthOneSpill += rec.partLength;   
             
-            long recordsInThisPartition = RecordsAfterCombine == -1 ? spindex - currentStartPos : RecordsAfterCombine;
+            long recordsInThisPartition = spindex - currentStartPos;
+            
+            if(combinerRunner != null) {
+        	recordsInThisPartition = combineOutputCounter.getValue() - partitionCombineCounter;
+        	partitionCombineCounter = combineOutputCounter.getValue();
+            }
            
             recordsInPartitions[i] += recordsInThisPartition;
             //added end

@@ -1843,7 +1843,11 @@ class MapTask extends Task {
           }
 
           //added by LijieXu
-          LOG.info("[BeforeMerge][Partition " + parts+ "]" + "<SegmentsNum = " + segmentList.size() 
+          boolean hasCombine = false;
+          if (combinerRunner != null && numSpills >= minSpillsForCombine)
+              hasCombine = true;
+          
+          LOG.info("[BeforeMerge][Partition " + parts+ "]" + " hasCombine = " + hasCombine + " <SegmentsNum = " + segmentList.size() 
         	  + ", records = " + recordsInPartitions[parts] + ", RawLength = " + rawLength 
         	  + ", CompressedLength = " + compressedLength + ">");
           //added end

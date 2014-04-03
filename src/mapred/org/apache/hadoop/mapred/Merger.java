@@ -177,6 +177,8 @@ class Merger {
     long segmentLength = -1;
     long rawDataLength = -1;
     
+    int mapperId = -1;
+    
     public Segment(Configuration conf, FileSystem fs, Path file,
                    CompressionCodec codec, boolean preserve) throws IOException {
       this(conf, fs, file, 0, fs.getFileStatus(file).getLen(), codec, preserve);
@@ -199,6 +201,8 @@ class Merger {
 
       this.segmentOffset = segmentOffset;
       this.segmentLength = segmentLength;
+      
+
     }
     
     public Segment(Reader<K, V> reader, boolean preserve) {
@@ -206,6 +210,14 @@ class Merger {
       this.preserve = preserve;
       
       this.segmentLength = reader.getLength();
+      
+      // added by Lijie Xu
+      if(reader instanceof InMemoryReader) {
+	    String id = ((InMemoryReader) reader).taskAttemptId.toString();
+	    this.mapperId = Integer.parseInt(id.substring(id.lastIndexOf('m') + 2, id.lastIndexOf('_')));
+	   
+      }
+      // added end
     }
 
     public Segment(Reader<K, V> reader, boolean preserve, long rawDataLength) {
@@ -214,6 +226,14 @@ class Merger {
 
       this.segmentLength = reader.getLength();
       this.rawDataLength = rawDataLength;
+      
+      // added by Lijie Xu
+      if(reader instanceof InMemoryReader) {
+	    String id = ((InMemoryReader) reader).taskAttemptId.toString();
+	    this.mapperId = Integer.parseInt(id.substring(id.lastIndexOf('m') + 2, id.lastIndexOf('_')));
+	   
+      }
+      // added end
     }
 
     private void init(Counters.Counter readsCounter) throws IOException {
@@ -252,14 +272,8 @@ class Merger {
     }
     
     // added by Lijie Xu
-    int getTaskId() {
-	if(reader instanceof InMemoryReader) {
-	    String id = ((InMemoryReader) reader).taskAttemptId.toString();
-	    int mapperId = Integer.parseInt(id.substring(id.lastIndexOf('m') + 2, id.lastIndexOf('_')));
-	    return mapperId;
-	}
-	   
-	return -1;
+    int getTaskId() {   
+	return mapperId;
     }
     // added end
   }

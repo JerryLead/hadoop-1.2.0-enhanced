@@ -86,17 +86,20 @@ public class Utils {
 
 		
 	Process p = null;
+	int exitCode = 0;
 	
 	try {
 	    p = new ProcessBuilder("bash", "-c", dumpComm).start();
-	    int exitCode = p.waitFor();
+	    exitCode = p.waitFor();
 	    LOG.info("[HeapDump] generate " + dumppath 
 		+ File.separatorChar + name + "-pid-" + pid + ".hprof");
 	} catch (IOException e) {
-	    // TODO Auto-generated catch block
+	    LOG.info("[Dump error] exitCode = " + exitCode + " " + dumppath 
+		+ File.separatorChar + name + "-pid-" + pid + ".hprof");
 	    e.printStackTrace();
 	} catch (InterruptedException e) {
-	    // TODO Auto-generated catch block
+	    LOG.info("[Dump error] exitCode = " + exitCode + " " + dumppath 
+			+ File.separatorChar + name + "-pid-" + pid + ".hprof");
 	    e.printStackTrace();
 	} finally {
 	    p.destroy();

@@ -100,10 +100,22 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     rcombineinputrecordslimits = Utils.parseHeapDumpConfs(conf.get("heapdump.reduce.combine.input.records"));
     isMapper = taskid.isMap();
     
-    if(mcombineinputrecordslimits != null)
+    if(mcombineinputrecordslimits != null) {
 	mcombinelen = mcombineinputrecordslimits.length;
-    if(rcombineinputrecordslimits != null)
+	for(; mcombinei < mcombinelen; mcombinei++) {
+	    if(mcombineinputrecordslimits[mcombinei] > inputValueCounter.getValue())
+		break;
+	}
+    }
+    
+    if(rcombineinputrecordslimits != null) {
 	rcombinelen = rcombineinputrecordslimits.length;
+	for(; rcombinei < rcombinelen; rcombinei++) {
+	    if(rcombineinputrecordslimits[rcombinei] > inputValueCounter.getValue())
+		break;
+	}
+    }
+    
     if(reduceinputrecordslimits != null)
 	reducelen = reduceinputrecordslimits.length;
     
@@ -115,7 +127,7 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 	rcombineinputrecordslimits = null;
     }
     // added end
-    
+   
   }
 
   /** Start processing next unique key. */
@@ -171,6 +183,7 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     if(isMapper) {
 	if(mcombineinputrecordslimits != null && mcombinei < mcombinelen 
 		&& inputValueCounter.getValue() == mcombineinputrecordslimits[mcombinei]) {
+	    
 	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "mCombInRecords-" + mcombineinputrecordslimits[mcombinei]);
 	    mcombinei++;
 	}

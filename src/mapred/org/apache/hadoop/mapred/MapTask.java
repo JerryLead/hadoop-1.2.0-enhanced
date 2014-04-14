@@ -1513,6 +1513,13 @@ class MapTask extends Task {
                             + PARTITION] == i) {
                 ++spindex;
               }
+              
+              // added by Lijie Xu
+              LOG.info("[Start combine() in spill " + numSpills + "]" + "[partition " + i + "]"
+        	      + "<currentCombineInputRecords = " + combineOutputCounter.getCounter() 
+        	      + ", records = " + (spindex - spstart) + ">");
+              // added end
+              
               // Note: we would like to avoid the combiner if we've fewer
               // than some threshold of records for a partition
               if (spstart != spindex) {

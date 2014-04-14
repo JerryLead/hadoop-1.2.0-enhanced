@@ -111,18 +111,17 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     
     if(mcombineinputrecordslimits != null) {
 	mcombinelen = mcombineinputrecordslimits.length;
+	
+	/*
 	for(; mcombinei < mcombinelen; mcombinei++) {
 	    if(mcombineinputrecordslimits[mcombinei] > inputValueCounter.getValue())
 		break;
 	}
+	*/
     }
     
     if(rcombineinputrecordslimits != null) {
 	rcombinelen = rcombineinputrecordslimits.length;
-	for(; rcombinei < rcombinelen; rcombinei++) {
-	    if(rcombineinputrecordslimits[rcombinei] > inputValueCounter.getValue())
-		break;
-	}
     }
     
     if(reduceinputrecordslimits != null)
@@ -137,16 +136,6 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     }
     // added end
    
-    // for test
-    try {
-	System.out.println("Current input records = " + inputValueCounter.getValue());
-	if(inputValueCounter.getValue() != 0) 
-		throw new Exception();
-    } catch(Exception e) {
-	
-	e.printStackTrace();
-    }
-    
   }
 
   /** Start processing next unique key. */

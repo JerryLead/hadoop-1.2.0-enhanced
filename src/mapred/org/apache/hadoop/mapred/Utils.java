@@ -148,7 +148,7 @@ public class Utils {
 		    .replaceAll(",", "").trim();
 	    String maxValueStr = heapDumpConf.substring(heapDumpConf.indexOf(':') + 1, heapDumpConf.indexOf(')'))
 		    .replaceAll(",", "").trim();
-	    long minValue = Long.parseLong(minValueStr);
+	    long minValue = Long.parseLong(minValueStr) + 1;
 	    long maxValue = Long.parseLong(maxValueStr) - 1;
 	    
 	    int partition = Integer.parseInt(heapDumpConf.substring(heapDumpConf.indexOf('[') + 1, 
@@ -159,7 +159,7 @@ public class Utils {
 	   
 	    for(int i = 0; i < partition; i++) 
 		values[i] = i * interval + minValue;
-	    values[partition] = maxValue - 1;
+	    values[partition] = maxValue;
 		   
 	    return values;
 		   

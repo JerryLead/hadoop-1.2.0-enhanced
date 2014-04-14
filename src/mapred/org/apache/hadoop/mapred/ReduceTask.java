@@ -3022,8 +3022,10 @@ class ReduceTask extends Task {
               if(i != inMemorySegments.size() - 1)
         	  sb.append(", ");
           }
-     
-          LOG.info("[InMemoryShuffleMerge begins] TaskIds(" + sb.toString() + ")");
+          
+          LOG.info("[InMemoryShuffleMerge begins] TaskIds(" + sb.toString() + ") <currentCombineInputRecords = "
+        	  + reporter.getCounter(Task.Counter.COMBINE_INPUT_RECORDS).getCounter() + ", currentCombineOutputRecords = "
+        	  + reporter.getCounter(Task.Counter.COMBINE_OUTPUT_RECORDS).getCounter() + ">");
           // added end
           LOG.info("Initiating in-memory merge with " + noInMemorySegments + 
                    " segments...");

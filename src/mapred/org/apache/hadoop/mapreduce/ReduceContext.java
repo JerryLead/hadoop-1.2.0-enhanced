@@ -24,6 +24,8 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -34,6 +36,7 @@ import org.apache.hadoop.mapred.RawKeyValueIterator;
 import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Shell;
+
 
 /**
  * The context passed to the {@link Reducer}.
@@ -70,6 +73,12 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
   private int mcombinei = 0, rcombinei = 0, reducei = 0;
   private long mcombinelen, rcombinelen, reducelen; 
   // added end
+  
+  
+//added by Lijie Xu
+  private static final Log LOG =
+	    LogFactory.getLog(Utils.class);
+// added end
   
   public ReduceContext(Configuration conf, TaskAttemptID taskid,
                        RawKeyValueIterator input, 
@@ -128,6 +137,16 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     }
     // added end
    
+    // for test
+    try {
+	System.out.println("Current input records = " + inputValueCounter.getValue());
+	if(inputValueCounter.getValue() != 0) 
+		throw new Exception();
+    } catch(Exception e) {
+	
+	e.printStackTrace();
+    }
+    
   }
 
   /** Start processing next unique key. */

@@ -1517,7 +1517,8 @@ class MapTask extends Task {
               // added by Lijie Xu
               LOG.info("[Start combine() in spill " + numSpills + "]" + "[partition " + i + "]"
         	      + "<currentCombineInputRecords = " + reporter.getCounter(COMBINE_INPUT_RECORDS).getCounter() 
-        	      + ", total records = " + (spindex - spstart) + ">");
+        	      + ", totalInputRecords = " + (spindex - spstart) + ", currentCombineOutputRecords = " 
+        	      + combineOutputCounter.getCounter() + ">");
               // added end
               
               // Note: we would like to avoid the combiner if we've fewer

@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.util.Shell;
 
@@ -195,7 +196,8 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
 	  try {
 	      while (context.nextKeyValue()) {
 		  if(i < lcount && record++ == mapinputrecordslimits[i]) {
-		      Utils.heapdump(context.getConfiguration().get("heapdump.path", "/tmp"), "mapInRecords-" + record);
+		      Utils.heapdump(context.getConfiguration().get("heapdump.path", "/tmp"), "mapInRecords-" + record
+			      + "-out-" + context.getCounter(Task.Counter.MAP_OUTPUT_RECORDS));
 		      i++;
 		  }
 		  map(context.getCurrentKey(), context.getCurrentValue(), context); 

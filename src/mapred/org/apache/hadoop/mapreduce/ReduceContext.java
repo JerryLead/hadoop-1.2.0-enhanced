@@ -33,6 +33,7 @@ import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
+import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Shell;
@@ -192,7 +193,8 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 	if(mcombineinputrecordslimits != null && mcombinei < mcombinelen 
 		&& inputValueCounter.getValue() == mcombineinputrecordslimits[mcombinei]) {
 	    
-	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "mCombInRecords-" + mcombineinputrecordslimits[mcombinei]);
+	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "mCombInRecords-" + mcombineinputrecordslimits[mcombinei]
+		    + "-out-" + ((StatusReporter)reporter).getCounter(Task.Counter.COMBINE_OUTPUT_RECORDS));
 	    mcombinei++;
 	}
     }
@@ -200,7 +202,8 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     else if(this.isCombine()){
 	if(rcombineinputrecordslimits != null && rcombinei < rcombinelen 
 		&& inputValueCounter.getValue() == rcombineinputrecordslimits[rcombinei]) {
-	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "rCombInRecords-" + rcombineinputrecordslimits[rcombinei]);
+	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "rCombInRecords-" + rcombineinputrecordslimits[rcombinei]
+		    + "-out-" + ((StatusReporter)reporter).getCounter(Task.Counter.COMBINE_OUTPUT_RECORDS));
 	    rcombinei++;
 	}
     }
@@ -208,7 +211,9 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     else {
 	if(reduceinputrecordslimits != null && reducei < reducelen 
 		&& inputValueCounter.getValue() == reduceinputrecordslimits[reducei]) {
-	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "redInRecords-" + reduceinputrecordslimits[reducei]);
+	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "redInRecords-" + reduceinputrecordslimits[reducei]
+		    + "-out-" + ((StatusReporter)reporter).getCounter(Task.Counter.REDUCE_OUTPUT_RECORDS)
+		    + "-group-" + ((StatusReporter)reporter).getCounter(Task.Counter.REDUCE_INPUT_GROUPS));
 	    reducei++;
 	}
 	   

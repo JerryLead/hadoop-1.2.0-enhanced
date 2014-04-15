@@ -262,7 +262,8 @@ class ReduceTask extends Task {
       reduceInputValueCounter.increment(1);
       // added by Lijie Xu
       if(reduceinputrecordslimits != null && i < len && reduceInputValueCounter.getCounter() == reduceinputrecordslimits[i]) {
-	  Utils.heapdump(dumppath, "redInRecords-" + reduceinputrecordslimits[i]);
+	  Utils.heapdump(dumppath, "redInRecords-" + reduceinputrecordslimits[i] + "-out-" + reduceOutputCounter.getCounter()
+		  + "-group-" + reduceInputKeyCounter.getCounter());
 	  i++;
       }
 	  
@@ -589,7 +590,9 @@ class ReduceTask extends Task {
 	  while (values.more()) {
 	        reduceInputKeyCounter.increment(1);
 	        if(i < len && reduceInputKeyCounter.getValue() == reduceinputgroupslimits[i]) {
-	            Utils.heapdump(job.get("heapdump.path", "/tmp"), "redInGroups-" + reduceinputgroupslimits[i]);	     
+	            Utils.heapdump(job.get("heapdump.path", "/tmp"), "redInGroups-" + reduceinputgroupslimits[i]
+	        	    + "-inrec-" + reporter.getCounter(Task.Counter.REDUCE_INPUT_RECORDS) 
+	        	    + "-outrec-" + reporter.getCounter(Task.Counter.REDUCE_OUTPUT_RECORDS));
 		    i++;
 	        }
 	     

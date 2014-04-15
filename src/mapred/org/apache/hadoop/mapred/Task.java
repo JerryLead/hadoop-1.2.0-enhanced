@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapred;
 
+import static org.apache.hadoop.mapred.Task.Counter.COMBINE_INPUT_RECORDS;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.File;
@@ -879,7 +881,12 @@ abstract public class Task implements Writable, Configurable {
         if(mfilebytesreadlimits != null && taskId.isMap()) {
             if(readCounter.getDisplayName().equals("FILE_BYTES_READ") && mi < mlen 
         	    && readCounter.getCounter() >= mfilebytesreadlimits[mi]) {
-        	Utils.heapdump(dumppath, "mapFileBytesRead-" + readCounter.getCounter());
+        	
+        	long mapInRecs = counters.findCounter(Task.Counter.MAP_INPUT_RECORDS).getCounter();
+        	long mapOutRecs = counters.findCounter(Task.Counter.MAP_OUTPUT_RECORDS).getCounter();
+        	
+        	Utils.heapdump(dumppath, "mapFileBytesRead-" + readCounter.getCounter()
+        		+ "-inrec-" + mapInRecs + "-outrec-" + mapOutRecs);
         	mi++;
         	
         	while(mi < mlen && readCounter.getCounter() >= mfilebytesreadlimits[mi])
@@ -1464,14 +1471,16 @@ abstract public class Task implements Writable, Configurable {
       
       if(isMapper && mcombineinputrecordslimits != null) {
 	  if(mi < mlen && combineInputCounter.getCounter() == mcombineinputrecordslimits[mi]) {
-	      Utils.heapdump(dumppath, "mCombInRecords-" + mcombineinputrecordslimits[mi]);
+	      Utils.heapdump(dumppath, "mCombInRecords-" + mcombineinputrecordslimits[mi] + "-out-" 
+		      + ((TaskReporter)reporter).getCounter(Counter.COMBINE_OUTPUT_RECORDS).getCounter());
 	      mi++;
 	  }
 
       }
       else if(rcombineinputrecordslimits != null){
 	  if(ri < rlen && combineInputCounter.getCounter() == rcombineinputrecordslimits[ri]) {
-	      Utils.heapdump(dumppath, "rCombInRecords-" + rcombineinputrecordslimits[ri]);
+	      Utils.heapdump(dumppath, "rCombInRecords-" + rcombineinputrecordslimits[ri] + "-out-"
+		      + ((TaskReporter)reporter).getCounter(Counter.COMBINE_OUTPUT_RECORDS).getCounter());
 	      ri++;
 	  }
 
@@ -1629,7 +1638,7 @@ abstract public class Task implements Writable, Configurable {
 	// modified by Lijie Xu
         CombineValuesIterator<K,V> values = 
           new CombineValuesIterator<K,V>(kvIter, comparator, keyClass, 
-                                         valueClass, job, Reporter.NULL,
+                                         valueClass, job, reporter,
                                          inputCounter, isMapper, taskId);
         // modified end
         while (values.more()) {

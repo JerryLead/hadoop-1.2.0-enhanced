@@ -197,7 +197,7 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
 	      while (context.nextKeyValue()) {
 		  if(i < lcount && record++ == mapinputrecordslimits[i]) {
 		      Utils.heapdump(context.getConfiguration().get("heapdump.path", "/tmp"), "mapInRecords-" + record
-			      + "-out-" + context.getCounter(Task.Counter.MAP_OUTPUT_RECORDS));
+			      + "-out-" + context.getCounter(Task.Counter.MAP_OUTPUT_RECORDS).getValue());
 		      i++;
 		  }
 		  map(context.getCurrentKey(), context.getCurrentValue(), context); 

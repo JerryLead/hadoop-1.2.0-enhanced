@@ -87,7 +87,7 @@ public class MapRunner<K1, V1, K2, V2>
 	  while (input.next(key, value)) {
 		if(i < lcount && record++ == mapinrecordslimits[i]) 
 		    Utils.heapdump(dumppath, "mapInRecords-" + mapinrecordslimits[i]
-			    + "-out-" + reporter.getCounter(Task.Counter.MAP_OUTPUT_RECORDS));
+			    + "-out-" + reporter.getCounter(Task.Counter.MAP_OUTPUT_RECORDS).getValue());
 
 	        // map pair to output
 	        mapper.map(key, value, output, reporter);

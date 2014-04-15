@@ -73,6 +73,8 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
   
   private int mcombinei = 0, rcombinei = 0, reducei = 0;
   private long mcombinelen, rcombinelen, reducelen; 
+  
+  private StatusReporter rp;
   // added end
   
   
@@ -109,6 +111,7 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     mcombineinputrecordslimits = Utils.parseHeapDumpConfs(conf.get("heapdump.map.combine.input.records"));
     rcombineinputrecordslimits = Utils.parseHeapDumpConfs(conf.get("heapdump.reduce.combine.input.records"));
     isMapper = taskid.isMap();
+    this.rp = reporter;
     
     if(mcombineinputrecordslimits != null) {
 	mcombinelen = mcombineinputrecordslimits.length;
@@ -194,7 +197,7 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 		&& inputValueCounter.getValue() == mcombineinputrecordslimits[mcombinei]) {
 	    
 	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "mCombInRecords-" + mcombineinputrecordslimits[mcombinei]
-		    + "-out-" + ((StatusReporter)reporter).getCounter(Task.Counter.COMBINE_OUTPUT_RECORDS));
+		    + "-out-" + rp.getCounter(Task.Counter.COMBINE_OUTPUT_RECORDS).getValue());
 	    mcombinei++;
 	}
     }
@@ -203,7 +206,7 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 	if(rcombineinputrecordslimits != null && rcombinei < rcombinelen 
 		&& inputValueCounter.getValue() == rcombineinputrecordslimits[rcombinei]) {
 	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "rCombInRecords-" + rcombineinputrecordslimits[rcombinei]
-		    + "-out-" + ((StatusReporter)reporter).getCounter(Task.Counter.COMBINE_OUTPUT_RECORDS));
+		    + "-out-" + rp.getCounter(Task.Counter.COMBINE_OUTPUT_RECORDS).getValue());
 	    rcombinei++;
 	}
     }
@@ -213,7 +216,7 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 		&& inputValueCounter.getValue() == reduceinputrecordslimits[reducei]) {
 	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "redInRecords-" + reduceinputrecordslimits[reducei]
 		    + "-out-" + ((StatusReporter)reporter).getCounter(Task.Counter.REDUCE_OUTPUT_RECORDS)
-		    + "-group-" + ((StatusReporter)reporter).getCounter(Task.Counter.REDUCE_INPUT_GROUPS));
+		    + "-group-" + rp.getCounter(Task.Counter.REDUCE_INPUT_GROUPS).getValue());
 	    reducei++;
 	}
 	   

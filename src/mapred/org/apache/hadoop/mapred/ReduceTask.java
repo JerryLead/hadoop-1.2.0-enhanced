@@ -591,8 +591,8 @@ class ReduceTask extends Task {
 	        reduceInputKeyCounter.increment(1);
 	        if(i < len && reduceInputKeyCounter.getValue() == reduceinputgroupslimits[i]) {
 	            Utils.heapdump(job.get("heapdump.path", "/tmp"), "redInGroups-" + reduceinputgroupslimits[i]
-	        	    + "-inrec-" + reporter.getCounter(Task.Counter.REDUCE_INPUT_RECORDS) 
-	        	    + "-outrec-" + reporter.getCounter(Task.Counter.REDUCE_OUTPUT_RECORDS));
+	        	    + "-inrec-" + reporter.getCounter(Task.Counter.REDUCE_INPUT_RECORDS).getCounter() 
+	        	    + "-outrec-" + reporter.getCounter(Task.Counter.REDUCE_OUTPUT_RECORDS).getCounter());
 		    i++;
 	        }
 	     

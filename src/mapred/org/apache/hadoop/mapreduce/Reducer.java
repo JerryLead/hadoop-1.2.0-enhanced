@@ -204,8 +204,8 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
 	  setup(context);
 	  try {
 	      while (context.nextKey()) {
-		  context.getCounter(Task.Counter.REDUCE_STARTINPUT_RECORDS)
-		  	.setValue(context.getCounter(Task.Counter.REDUCE_INPUT_RECORDS).getValue());
+		  long reduce_input_records = context.getCounter(Task.Counter.REDUCE_INPUT_RECORDS).getValue();
+		  context.getCounter(Task.Counter.REDUCE_STARTINPUT_RECORDS).setValue(reduce_input_records);
 		  
 		  if(i < lcount && record++ == reduceinputgroupslimits[i]) {
 		      Utils.heapdump(context.getConfiguration().get("heapdump.path", "/tmp"), "redInGroups-" + reduceinputgroupslimits[i]

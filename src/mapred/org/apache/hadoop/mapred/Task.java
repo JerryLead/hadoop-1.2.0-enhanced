@@ -870,11 +870,14 @@ abstract public class Task implements Writable, Configurable {
 	  mlen = mfilebytesreadlimits.length;
       if(rfilebytesreadlimits != null)
 	  rlen = rfilebytesreadlimits.length;
+      if(mhdfsbytesreadlimits != null)
+	  mhlen = mhdfsbytesreadlimits.length;
       
       Set<String> profileTaskIds = Utils.parseTaskIds(conf.get("heapdump.task.attempt.ids"));
       if(profileTaskIds != null && !Utils.isSetContainsId(profileTaskIds, taskId.toString())) {
 	  mfilebytesreadlimits = null;
 	  rfilebytesreadlimits = null;
+	  mhdfsbytesreadlimits = null;
       }
       // added end
     }
@@ -903,22 +906,7 @@ abstract public class Task implements Writable, Configurable {
         	
         	while(mi < mlen && readCounter.getCounter() >= mfilebytesreadlimits[mi])
         	    mi++;
-            }
-            
-            if(readCounter.getDisplayName().equals("HDFS_BYTES_READ") && mhi < mhlen 
-        	    && readCounter.getCounter() >= mhdfsbytesreadlimits[mhi]) {
-        	
-        	long mapInRecs = counters.findCounter(Task.Counter.MAP_INPUT_RECORDS).getCounter();
-        	long mapOutRecs = counters.findCounter(Task.Counter.MAP_OUTPUT_RECORDS).getCounter();
-        	
-        	Utils.heapdump(dumppath, "mapHdfsBytesRead-" + readCounter.getCounter()
-        		+ "-inrec-" + mapInRecs + "-outrec-" + mapOutRecs);
-        	mhi++;
-        	
-        	while(mhi < mhlen && readCounter.getCounter() >= mhdfsbytesreadlimits[mhi])
-        	    mhi++;
-            }
-        	
+            }	
             
         }
         
@@ -930,6 +918,22 @@ abstract public class Task implements Writable, Configurable {
  	
        	 	while(ri < rlen && readCounter.getCounter() >= rfilebytesreadlimits[ri])
        	 	    ri++;
+            }
+        }
+        
+        if(mhdfsbytesreadlimits != null && taskId.isMap()) {
+            if(readCounter.getDisplayName().equals("HDFS_BYTES_READ") && mhi < mhlen 
+            	    && readCounter.getCounter() >= mhdfsbytesreadlimits[mhi]) {
+            	
+        	long mapInRecs = counters.findCounter(Task.Counter.MAP_INPUT_RECORDS).getCounter();
+        	long mapOutRecs = counters.findCounter(Task.Counter.MAP_OUTPUT_RECORDS).getCounter();
+            	
+        	Utils.heapdump(dumppath, "mapHdfsBytesRead-" + readCounter.getCounter()
+            		+ "-inrec-" + mapInRecs + "-outrec-" + mapOutRecs);
+        	mhi++;
+            	
+        	while(mhi < mhlen && readCounter.getCounter() >= mhdfsbytesreadlimits[mhi])
+            	   mhi++;
             }
         }
         // added end

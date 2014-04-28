@@ -90,6 +90,7 @@ abstract public class Task implements Writable, Configurable {
     REDUCE_OUTPUT_RECORDS,
     REDUCE_SKIPPED_GROUPS,
     REDUCE_SKIPPED_RECORDS,
+    REDUCE_STARTINPUT_RECORDS,
     SPILLED_RECORDS,
     SPLIT_RAW_BYTES,
     CPU_MILLISECONDS,
@@ -838,9 +839,17 @@ abstract public class Task implements Writable, Configurable {
     // added by Lijie Xu
     private long[] mfilebytesreadlimits;
     private long[] rfilebytesreadlimits;
+    
+    private long[] mhdfsbytesreadlimits;
+  
+    
     private String dumppath; 
     private int mi = 0, ri = 0;
     private int mlen, rlen;
+    
+    private int mhi = 0;
+    private int mhlen;
+    
     //private boolean mDumped = false;
     //private boolean rDumped = false;
     // added end
@@ -852,6 +861,9 @@ abstract public class Task implements Writable, Configurable {
       // added by Lijie Xu
       mfilebytesreadlimits = Utils.parseHeapDumpConfs(conf.get("heapdump.map.file.bytes.read"));
       rfilebytesreadlimits = Utils.parseHeapDumpConfs(conf.get("heapdump.reduce.file.bytes.read"));
+      
+      mhdfsbytesreadlimits = Utils.parseHeapDumpConfs(conf.get("heapdump.map.hdfs.bytes.read"));
+      
       dumppath = conf.get("heapdump.path", "/tmp");
       
       if(mfilebytesreadlimits != null)
@@ -891,6 +903,20 @@ abstract public class Task implements Writable, Configurable {
         	
         	while(mi < mlen && readCounter.getCounter() >= mfilebytesreadlimits[mi])
         	    mi++;
+            }
+            
+            if(readCounter.getDisplayName().equals("HDFS_BYTES_READ") && mhi < mhlen 
+        	    && readCounter.getCounter() >= mhdfsbytesreadlimits[mhi]) {
+        	
+        	long mapInRecs = counters.findCounter(Task.Counter.MAP_INPUT_RECORDS).getCounter();
+        	long mapOutRecs = counters.findCounter(Task.Counter.MAP_OUTPUT_RECORDS).getCounter();
+        	
+        	Utils.heapdump(dumppath, "mapHdfsBytesRead-" + readCounter.getCounter()
+        		+ "-inrec-" + mapInRecs + "-outrec-" + mapOutRecs);
+        	mhi++;
+        	
+        	while(mhi < mhlen && readCounter.getCounter() >= mhdfsbytesreadlimits[mhi])
+        	    mhi++;
             }
         	
             

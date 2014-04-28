@@ -215,7 +215,7 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 	if(reduceinputrecordslimits != null && reducei < reducelen 
 		&& inputValueCounter.getValue() == reduceinputrecordslimits[reducei]) {
 	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "redInRecords-" + reduceinputrecordslimits[reducei]
-		    + "-out-" + ((StatusReporter)reporter).getCounter(Task.Counter.REDUCE_OUTPUT_RECORDS)
+		    + "-out-" + rp.getCounter(Task.Counter.REDUCE_OUTPUT_RECORDS)
 		    + "-group-" + rp.getCounter(Task.Counter.REDUCE_INPUT_GROUPS).getValue());
 	    reducei++;
 	}

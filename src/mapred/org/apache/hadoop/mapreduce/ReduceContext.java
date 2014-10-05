@@ -75,6 +75,10 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
   private long mcombinelen, rcombinelen, reducelen; 
   
   private StatusReporter rp;
+  
+  private long[] mCombineOmits;
+  private long[] rCombineOmits;
+
   // added end
   
   
@@ -107,6 +111,11 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     hasMore = input.next();
     
     // added by Lijie Xu
+    
+    mCombineOmits = Utils.parseHeapDumpConfs(conf.get("omit.map.combine.input.records"));
+    rCombineOmits = Utils.parseHeapDumpConfs(conf.get("omit.reduce.combine.input.records"));
+   
+    
     reduceinputrecordslimits = Utils.parseHeapDumpConfs(conf.get("heapdump.reduce.input.records"));
     mcombineinputrecordslimits = Utils.parseHeapDumpConfs(conf.get("heapdump.map.combine.input.records"));
     rcombineinputrecordslimits = Utils.parseHeapDumpConfs(conf.get("heapdump.reduce.combine.input.records"));
@@ -137,6 +146,9 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 	reduceinputrecordslimits = null;
 	mcombineinputrecordslimits = null;
 	rcombineinputrecordslimits = null;
+	
+	mCombineOmits = null;
+	rCombineOmits = null;
     }
     // added end
    
@@ -162,6 +174,53 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
    */
   @Override
   public boolean nextKeyValue() throws IOException, InterruptedException {
+      
+    if((mCombineOmits != null && this.isMapper && this.isCombine()) || (rCombineOmits != null && !this.isMapper && this.isCombine())) {
+	
+
+	long currentInputRecord = inputValueCounter.getValue();
+	long omitStart = mCombineOmits[0]; // 2540389
+	long omitEnd = mCombineOmits[1];   // 3288321
+	if(currentInputRecord == omitStart) {
+
+	    while(inputValueCounter.getValue() < omitEnd) {
+		    firstValue = !nextKeyIsSame;
+		    DataInputBuffer next = input.getKey();
+		    currentRawKey.set(next.getData(), next.getPosition(), 
+				next.getLength() - next.getPosition());
+		    buffer.reset(currentRawKey.getBytes(), 0, currentRawKey.getLength());
+		    key = keyDeserializer.deserialize(key);
+		    next = input.getValue();
+		    buffer.reset(next.getData(), next.getPosition(), next.getLength() - next.getPosition());
+		    value = valueDeserializer.deserialize(value); 
+		    hasMore = input.next();
+		    if (hasMore) {
+			next = input.getKey();
+			nextKeyIsSame = comparator.compare(currentRawKey.getBytes(), 0, 
+			                                         currentRawKey.getLength(),
+			                                         next.getData(),
+			                                         next.getPosition(),
+			                                         next.getLength() - next.getPosition()
+			                                         ) == 0;
+		    } else {
+			nextKeyIsSame = false;
+		    }
+		    inputValueCounter.increment(1);
+	    }
+	   
+	    if(inputValueCounter.getValue() == omitEnd) {
+		Utils.heapdump(conf.get("heapdump.path", "/tmp"), "mCombInRecords-" + inputValueCounter.getValue()
+			    + "-out-" + rp.getCounter(Task.Counter.COMBINE_OUTPUT_RECORDS).getValue());
+		return true;
+	    }
+	    else {
+		LOG.info("Error in dump the ommited record at " + inputValueCounter.getValue());
+		return false;
+	    }
+		
+	}
+    }
+    
     if (!hasMore) {
       key = null;
       value = null;
@@ -176,7 +235,7 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     next = input.getValue();
     buffer.reset(next.getData(), next.getPosition(),
         next.getLength() - next.getPosition());
-    value = valueDeserializer.deserialize(value);
+    value = valueDeserializer.deserialize(value); 
     hasMore = input.next();
     if (hasMore) {
       next = input.getKey();
@@ -192,6 +251,8 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     inputValueCounter.increment(1);
  
     // added by Lijie Xu
+    
+    
     if(isMapper) {
 	if(mcombineinputrecordslimits != null && mcombinei < mcombinelen 
 		&& inputValueCounter.getValue() == mcombineinputrecordslimits[mcombinei]) {

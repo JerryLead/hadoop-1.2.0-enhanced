@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.lib.output;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -289,18 +290,31 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
     private RecordWriter writer;
     private String counterName;
     private TaskInputOutputContext context;
+    
+    // added by Lijie Xu
+    //private long[] mcombineoutputrecordslimits;
+    // added end
 
     public RecordWriterWithCounter(RecordWriter writer, String counterName,
                                    TaskInputOutputContext context) {
       this.writer = writer;
       this.counterName = counterName;
       this.context = context;
+      
+      // added by Lijie Xu
+      // mcombineoutputrecordslimits = Utils.parseHeapDumpConfs(context.getConfiguration().get("heapdump.reduce.output.records"));
+      // added end
     }
 
     @SuppressWarnings({"unchecked"})
     public void write(Object key, Object value) 
         throws IOException, InterruptedException {
       context.getCounter(COUNTERS_GROUP, counterName).increment(1);
+      
+      // added by Lijie Xu
+      
+      // added end
+      
       writer.write(key, value);
     }
 

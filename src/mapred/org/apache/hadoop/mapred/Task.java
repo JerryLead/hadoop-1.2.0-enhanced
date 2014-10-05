@@ -1318,11 +1318,24 @@ abstract public class Task implements Writable, Configurable {
     private Counters.Counter outCounter;
     private Progressable progressable;
     private long progressBar;
+    
+    // added by Lijie Xu
+    private long[] dCombineOutputRecords;
+    
+    private Configuration conf;
+
+    // added end
 
     public CombineOutputCollector(Counters.Counter outCounter, Progressable progressable, Configuration conf) {
       this.outCounter = outCounter;
       this.progressable=progressable;
       progressBar = conf.getLong(MR_COMBINE_RECORDS_BEFORE_PROGRESS, DEFAULT_MR_COMBINE_RECORDS_BEFORE_PROGRESS);
+    
+      // added by Lijie Xu
+      this.conf = conf;
+      dCombineOutputRecords = Utils.parseHeapDumpConfs(conf.get("heapdump.combine.output.records"));
+
+      // added end
     }
     
     public synchronized void setWriter(Writer<K, V> writer) {
@@ -1332,6 +1345,14 @@ abstract public class Task implements Writable, Configurable {
     public synchronized void collect(K key, V value)
         throws IOException {
       outCounter.increment(1);
+      
+      // added by Lijie Xu
+      if(dCombineOutputRecords != null) {
+	  if(outCounter.getValue() == dCombineOutputRecords[0]) {    
+		    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "CombInRecords" 
+			    + "-out-" + outCounter.getValue());
+      }
+      
       writer.append(key, value);
       if ((outCounter.getValue() % progressBar) == 0) {
         progressable.progress();

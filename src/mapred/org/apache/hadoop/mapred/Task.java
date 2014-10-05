@@ -1348,7 +1348,7 @@ abstract public class Task implements Writable, Configurable {
       
       // added by Lijie Xu
       if(dCombineOutputRecords != null) {
-	  if(outCounter.getValue() == dCombineOutputRecords[0]) {    
+	  if(outCounter.getValue() == dCombineOutputRecords[0])   
 		    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "CombInRecords" 
 			    + "-out-" + outCounter.getValue());
       }

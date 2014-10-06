@@ -79,6 +79,7 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
   private long[] mCombineOmits;
   private long[] rCombineOmits;
   private long combineInputGroups = 0;
+  private long[] reduceOmits;
 
   // added end
   
@@ -115,6 +116,8 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     
     mCombineOmits = Utils.parseHeapDumpConfs(conf.get("omit.map.combine.input.records"));
     rCombineOmits = Utils.parseHeapDumpConfs(conf.get("omit.reduce.combine.input.records"));
+    
+    reduceOmits = Utils.parseHeapDumpConfs(conf.get("omit.reduce.input.records"));
    
     
     reduceinputrecordslimits = Utils.parseHeapDumpConfs(conf.get("heapdump.reduce.input.records"));
@@ -150,6 +153,7 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 	
 	mCombineOmits = null;
 	rCombineOmits = null;
+	reduceOmits = null;
     }
     // added end
    
@@ -248,6 +252,59 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 		
 	}
     }
+    
+    if(reduceOmits != null && !this.isMapper) {
+	
+
+	long currentInputRecord = inputValueCounter.getValue();
+	
+	long omitStart; // 2540389
+	long omitEnd;   // 3288321
+	
+	omitStart = reduceOmits[0]; 
+	omitEnd = reduceOmits[1];   
+	
+	if(currentInputRecord == omitStart) {
+
+	    while(inputValueCounter.getValue() < omitEnd) {
+		    firstValue = !nextKeyIsSame;
+		    DataInputBuffer next = input.getKey();
+		    currentRawKey.set(next.getData(), next.getPosition(), 
+				next.getLength() - next.getPosition());
+		    buffer.reset(currentRawKey.getBytes(), 0, currentRawKey.getLength());
+		    key = keyDeserializer.deserialize(key);
+		    next = input.getValue();
+		    buffer.reset(next.getData(), next.getPosition(), next.getLength() - next.getPosition());
+		    value = valueDeserializer.deserialize(value); 
+		    hasMore = input.next();
+		    if (hasMore) {
+			next = input.getKey();
+			nextKeyIsSame = comparator.compare(currentRawKey.getBytes(), 0, 
+			                                         currentRawKey.getLength(),
+			                                         next.getData(),
+			                                         next.getPosition(),
+			                                         next.getLength() - next.getPosition()
+			                                         ) == 0;
+		    } else {
+			nextKeyIsSame = false;
+		    }
+		    inputValueCounter.increment(1);
+	    }
+	   
+	    if(inputValueCounter.getValue() == omitEnd) {
+		Utils.heapdump(conf.get("heapdump.path", "/tmp"), "redInRecords-" + inputValueCounter.getValue()
+			    + "-out-" + rp.getCounter(Task.Counter.REDUCE_OUTPUT_RECORDS).getValue()
+			    + "-group-" + rp.getCounter(Task.Counter.REDUCE_INPUT_GROUPS).getValue());
+		return true;
+	    }
+	    else {
+		LOG.info("Error in dump the ommited record at " + inputValueCounter.getValue());
+		return false;
+	    }
+		
+	}
+    }
+
     
     if (!hasMore) {
       key = null;

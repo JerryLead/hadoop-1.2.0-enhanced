@@ -187,8 +187,19 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 	
 
 	long currentInputRecord = inputValueCounter.getValue();
-	long omitStart = mCombineOmits[0]; // 2540389
-	long omitEnd = mCombineOmits[1];   // 3288321
+	
+	long omitStart; // 2540389
+	long omitEnd;   // 3288321
+	
+	if(mCombineOmits != null) {
+	    omitStart = mCombineOmits[0]; 
+	    omitEnd = mCombineOmits[1];   
+	}
+	else {
+	    omitStart = rCombineOmits[0]; 
+	    omitEnd = rCombineOmits[1];   
+	}
+	
 	if(currentInputRecord == omitStart) {
 
 	    while(inputValueCounter.getValue() < omitEnd) {

@@ -78,6 +78,7 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
   
   private long[] mCombineOmits;
   private long[] rCombineOmits;
+  private long combineInputGroups = 0;
 
   // added end
   
@@ -163,6 +164,13 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
       if (inputKeyCounter != null) {
         inputKeyCounter.increment(1);
       }
+      
+      // added by Lijie Xu
+      else {
+	combineInputGroups++;
+      }
+      
+      // added end
       return nextKeyValue();
     } else {
       return false;
@@ -208,11 +216,20 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 		    inputValueCounter.increment(1);
 	    }
 	   
-	    if(inputValueCounter.getValue() == omitEnd) {
+	    if(mCombineOmits != null && inputValueCounter.getValue() == omitEnd) {
 		Utils.heapdump(conf.get("heapdump.path", "/tmp"), "mCombInRecords-" + inputValueCounter.getValue()
-			    + "-out-" + rp.getCounter(Task.Counter.COMBINE_OUTPUT_RECORDS).getValue());
+			    + "-out-" + rp.getCounter(Task.Counter.COMBINE_OUTPUT_RECORDS).getValue()
+			    + "-group-" + combineInputGroups);
 		return true;
 	    }
+	    
+	    else if(rCombineOmits != null && inputValueCounter.getValue() == omitEnd) {
+		Utils.heapdump(conf.get("heapdump.path", "/tmp"), "rCombInRecords-" + inputValueCounter.getValue()
+			    + "-out-" + rp.getCounter(Task.Counter.COMBINE_OUTPUT_RECORDS).getValue()
+			    + "-group-" + combineInputGroups);
+		return true;
+	    }
+	    
 	    else {
 		LOG.info("Error in dump the ommited record at " + inputValueCounter.getValue());
 		return false;
@@ -258,7 +275,8 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 		&& inputValueCounter.getValue() == mcombineinputrecordslimits[mcombinei]) {
 	    
 	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "mCombInRecords-" + mcombineinputrecordslimits[mcombinei]
-		    + "-out-" + rp.getCounter(Task.Counter.COMBINE_OUTPUT_RECORDS).getValue());
+		    + "-out-" + rp.getCounter(Task.Counter.COMBINE_OUTPUT_RECORDS).getValue()
+		    + "-group-" + combineInputGroups);
 	    mcombinei++;
 	}
     }
@@ -267,7 +285,8 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 	if(rcombineinputrecordslimits != null && rcombinei < rcombinelen 
 		&& inputValueCounter.getValue() == rcombineinputrecordslimits[rcombinei]) {
 	    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "rCombInRecords-" + rcombineinputrecordslimits[rcombinei]
-		    + "-out-" + rp.getCounter(Task.Counter.COMBINE_OUTPUT_RECORDS).getValue());
+		    + "-out-" + rp.getCounter(Task.Counter.COMBINE_OUTPUT_RECORDS).getValue()
+		    + "-group-" + combineInputGroups);
 	    rcombinei++;
 	}
     }

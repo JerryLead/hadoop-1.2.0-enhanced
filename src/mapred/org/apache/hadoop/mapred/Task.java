@@ -1352,6 +1352,7 @@ abstract public class Task implements Writable, Configurable {
 		    Utils.heapdump(conf.get("heapdump.path", "/tmp"), "CombInRecords" 
 			    + "-out-" + outCounter.getValue());
       }
+      // added end
       
       writer.append(key, value);
       if ((outCounter.getValue() % progressBar) == 0) {

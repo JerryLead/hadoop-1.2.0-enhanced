@@ -626,6 +626,11 @@ class ReduceTask extends Task {
     private final org.apache.hadoop.mapreduce.Counter outputRecordCounter;
     private final org.apache.hadoop.mapreduce.Counter fileOutputByteCounter;
     private final Statistics fsStats;
+    
+    // added by Lijie Xu
+    private long[] reduceOutputRecords;
+    // added end
+    
   
     NewTrackingRecordWriter(org.apache.hadoop.mapreduce.Counter recordCounter,
         JobConf job, TaskReporter reporter,
@@ -648,6 +653,10 @@ class ReduceTask extends Task {
           .getRecordWriter(taskContext);
       long bytesOutCurr = getOutputBytes(fsStats);
       fileOutputByteCounter.increment(bytesOutCurr - bytesOutPrev);
+      
+      // added by Lijie Xu
+      reduceOutputRecords = Utils.parseHeapDumpConfs(conf.get("heapdump.reduce.output.records"));
+      // added end
     }
 
     @Override
@@ -661,11 +670,22 @@ class ReduceTask extends Task {
 
     @Override
     public void write(K key, V value) throws IOException, InterruptedException {
+      // added by Lijie Xu
+	 
+      if(reduceOutputRecords != null) {
+	  if(outputRecordCounter.getValue() == reduceOutputRecords[0] - 1)  
+	      Utils.heapdump(conf.get("heapdump.path", "/tmp"), "reduceInRecords" 
+				    + "-out-" + outputRecordCounter.getValue() + 1);
+      }
+	      // added end
+	
       long bytesOutPrev = getOutputBytes(fsStats);
       real.write(key,value);
       long bytesOutCurr = getOutputBytes(fsStats);
       fileOutputByteCounter.increment(bytesOutCurr - bytesOutPrev);
       outputRecordCounter.increment(1);
+      
+      
     }
     
     private long getOutputBytes(Statistics stats) {

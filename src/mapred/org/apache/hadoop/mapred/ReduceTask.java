@@ -269,8 +269,8 @@ class ReduceTask extends Task {
 	
      if(reduceOmits != null) {
 	
-	long omitStart = reduceOmits[0]; // 0
-	long omitEnd = reduceOmits[1];   // 6364863
+	long omitStart = reduceOmits[0]; 
+	long omitEnd = reduceOmits[1];   
 
 	if(reduceInputValueCounter.getValue() == omitStart) {
 	    VALUE v = null;

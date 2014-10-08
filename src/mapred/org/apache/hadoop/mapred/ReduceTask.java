@@ -235,7 +235,9 @@ class ReduceTask extends Task {
     private int i = 0;
     private int len;
     private String dumppath;
+    private long[] reduceOmits;
     // added end
+    
     public ReduceValuesIterator (RawKeyValueIterator in,
                                  RawComparator<KEY> comparator, 
                                  Class<KEY> keyClass,
@@ -250,15 +252,47 @@ class ReduceTask extends Task {
 	  len = reduceinputrecordslimits.length;
       dumppath = conf.get("heapdump.path", "/tmp");
       
+      
+      reduceOmits = Utils.parseHeapDumpConfs(conf.get("omit.reduce.input.records"));
+      
       Set<String> profileTaskIds = Utils.parseTaskIds(conf.get("heapdump.task.attempt.ids"));
-      if(profileTaskIds != null && !Utils.isSetContainsId(profileTaskIds, taskAttemptID.toString()))
+      if(profileTaskIds != null && !Utils.isSetContainsId(profileTaskIds, taskAttemptID.toString())) {
 	  reduceinputrecordslimits = null;
+	  reduceOmits = null;
+      }
       
       // added end
     }
 
     @Override
     public VALUE next() {
+	
+     if(reduceOmits != null) {
+	
+	long omitStart = reduceOmits[0]; // 0
+	long omitEnd = reduceOmits[1];   // 6364863
+
+	if(reduceInputValueCounter.getValue() == omitStart) {
+	    VALUE v = null;
+	    
+	    while(reduceInputValueCounter.getValue() < omitEnd) {
+		 reduceInputValueCounter.increment(1);
+		 v = moveToNext();
+	    }
+	    
+	    if(reduceInputValueCounter.getValue() == omitEnd) {
+		Utils.heapdump(conf.get("heapdump.path", "/tmp"), "redInRecords-" + reduceInputValueCounter.getValue()
+			+ "-out-" + reduceOutputCounter.getCounter()
+			  + "-group-" + reduceInputKeyCounter.getCounter());
+		return v;
+	    }
+	    else {
+		LOG.info("Error in dump the ommited record at " + reduceInputValueCounter.getValue());
+		return null;
+	    }
+	}
+     }
+    
       reduceInputValueCounter.increment(1);
       // added by Lijie Xu
       if(reduceinputrecordslimits != null && i < len && reduceInputValueCounter.getCounter() == reduceinputrecordslimits[i]) {
@@ -266,6 +300,8 @@ class ReduceTask extends Task {
 		  + "-group-" + reduceInputKeyCounter.getCounter());
 	  i++;
       }
+      
+      
 	  
       // added end
       return moveToNext();
@@ -675,7 +711,7 @@ class ReduceTask extends Task {
       if(reduceOutputRecords != null) {
 	  if(outputRecordCounter.getValue() == reduceOutputRecords[0] - 1)  
 	      Utils.heapdump(conf.get("heapdump.path", "/tmp"), "reduceInRecords" 
-				    + "-out-" + outputRecordCounter.getValue() + 1);
+				    + "-out-" + (outputRecordCounter.getValue() + 1));
       }
 	      // added end
 	

@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.mapred.MemoryMonitor;
 import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.util.Shell;
@@ -169,10 +170,20 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
       long mapinputrecordslimits[] = Utils.parseHeapDumpConfs(context.getConfiguration().get("heapdump.map.input.records"));
       
       Set<String> profileTaskIds = Utils.parseTaskIds(context.getConfiguration().get("heapdump.task.attempt.ids"));
+      
+      // for monitoring the memory usage
+      Set<String> monitorTasksIds = Utils.parseTaskIds(context.getConfiguration().get("monitor.task.attempt.ids"));
+      long monitorMapInterval = context.getConfiguration().getLong("monitor.record.map.interval", 0);
+      
+      if(monitorTasksIds != null && !Utils.isSetContainsId(profileTaskIds, context.getTaskAttemptID().toString())) 
+	  monitorMapInterval = 0;
+      // for end
+	
+      
       if(profileTaskIds != null && !Utils.isSetContainsId(profileTaskIds, context.getTaskAttemptID().toString()))
 	  mapinputrecordslimits = null;
       
-      if(mapinputrecordslimits == null) {
+      if(mapinputrecordslimits == null && monitorMapInterval == 0) {
 	  setup(context);
 	 
 	  LOG.info("[map() begins]");
@@ -185,6 +196,33 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
 	      cleanup(context);
 	  }
       }
+      
+      else if (mapinputrecordslimits == null && monitorMapInterval != 0){
+	  
+	  setup(context);
+	  
+	  MemoryMonitor.recordInterval = monitorMapInterval;
+	  MemoryMonitor.mapMonitorThread.start();
+	  
+	  LOG.info("[map() begins]");
+	  try {
+	      while (context.nextKeyValue()) {
+		  MemoryMonitor.monitorAfterProcessRecord();
+		  MemoryMonitor.addRecord();
+		  MemoryMonitor.monitorBeforeMapProcessRecord();
+		  
+		  map(context.getCurrentKey(), context.getCurrentValue(), context);
+		  
+		 
+	      }
+	  } finally {
+	      if(MemoryMonitor.mapMonitorThread.isAlive())
+		  MemoryMonitor.mapMonitorThread.interrupt();
+	      LOG.info("[map() ends]");
+	      cleanup(context);
+	  }
+      }
+      
       
       else {
 	  long record = 0;
@@ -207,6 +245,8 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
 	      cleanup(context);
 	  }
       }
+      
+     
     }
   // modified end
    

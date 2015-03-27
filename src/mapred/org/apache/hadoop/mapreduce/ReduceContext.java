@@ -32,11 +32,14 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
+import org.apache.hadoop.mapred.MemoryMonitor;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
 import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Shell;
+
+
 
 
 /**
@@ -80,6 +83,7 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
   private long[] rCombineOmits;
   private long combineInputGroups = 0;
   private long[] reduceOmits;
+  
 
   // added end
   
@@ -186,6 +190,7 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
    */
   @Override
   public boolean nextKeyValue() throws IOException, InterruptedException {
+  
       
     if((mCombineOmits != null && this.isMapper && this.isCombine()) || (rCombineOmits != null && !this.isMapper && this.isCombine())) {
 	
@@ -368,6 +373,11 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 	    reducei++;
 	}
 	   
+	if(MemoryMonitor.groupInterval != 0) {
+	    MemoryMonitor.monitorAfterProcessRecord();
+	    MemoryMonitor.addRecord();
+	    MemoryMonitor.monitorBeforeReduceProcessRecord();
+	}
     } 
     // added end
     return true;

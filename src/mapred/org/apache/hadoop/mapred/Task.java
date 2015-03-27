@@ -63,6 +63,7 @@ import org.apache.hadoop.util.ResourceCalculatorPlugin.ProcResourceValues;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
 
+
 /** 
  * Base class for tasks.
  * 
@@ -1376,6 +1377,7 @@ abstract public class Task implements Writable, Configurable {
     private DataInputBuffer keyIn = new DataInputBuffer();
     private DataInputBuffer valueIn = new DataInputBuffer();
     
+    
     public ValuesIterator (RawKeyValueIterator in, 
                            RawComparator<KEY> comparator, 
                            Class<KEY> keyClass,
@@ -1443,6 +1445,7 @@ abstract public class Task implements Writable, Configurable {
 
     /** The current key. */
     KEY getKey() { 
+      
       return key; 
     }
 

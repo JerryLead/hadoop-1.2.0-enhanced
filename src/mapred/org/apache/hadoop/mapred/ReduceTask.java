@@ -92,6 +92,7 @@ import org.apache.hadoop.metrics2.lib.MetricMutableCounterInt;
 import org.apache.hadoop.metrics2.lib.MetricMutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 
+
 /** A Reduce task. */
 class ReduceTask extends Task {
 
@@ -128,6 +129,8 @@ class ReduceTask extends Task {
     getCounters().findCounter(Counter.REDUCE_OUTPUT_RECORDS);
   private Counters.Counter reduceCombineOutputCounter =
     getCounters().findCounter(Counter.COMBINE_OUTPUT_RECORDS);
+  
+
 
   // A custom comparator for map output files. Here the ordering is determined
   // by the file's size and path. In case of files with same size and different
@@ -236,6 +239,9 @@ class ReduceTask extends Task {
     private int len;
     private String dumppath;
     private long[] reduceOmits;
+    
+   
+   
     // added end
     
     public ReduceValuesIterator (RawKeyValueIterator in,
@@ -260,6 +266,8 @@ class ReduceTask extends Task {
 	  reduceinputrecordslimits = null;
 	  reduceOmits = null;
       }
+      
+      
       
       // added end
     }
@@ -301,6 +309,12 @@ class ReduceTask extends Task {
 	  i++;
       }
       
+     
+      if(MemoryMonitor.groupInterval != 0) {
+	  MemoryMonitor.monitorAfterProcessRecord();
+	  MemoryMonitor.addRecord();
+	  MemoryMonitor.monitorBeforeReduceProcessRecord();
+      }
       
 	  
       // added end
@@ -606,9 +620,24 @@ class ReduceTask extends Task {
       if(profileTaskIds != null && !Utils.isSetContainsId(profileTaskIds, super.getTaskID().toString()))
 	  reduceinputgroupslimits = null;
       
-      if(reduceinputgroupslimits == null) {
+      
+      // for monitoring the memory usage
+      Set<String> monitorTasksIds = Utils.parseTaskIds(conf.get("monitor.task.attempt.ids"));
+      long monitorReduceGroupInterval = conf.getLong("monitor.group.reduce.interval", 0);
+      long monitorReduceRecordInterval = conf.getLong("monitor.record.reduce.interval", 0);
+      
+      if(monitorTasksIds != null && !Utils.isSetContainsId(profileTaskIds, super.getTaskID().toString())) {
+	  monitorReduceGroupInterval = 0;
+	  monitorReduceRecordInterval = 0;
+      }
+      // for end
+      
+ 
+	  
+      if(reduceinputgroupslimits == null && monitorReduceGroupInterval == 0) {
 	  while (values.more()) {
 	        reduceInputKeyCounter.increment(1);
+	       
 	        reducer.reduce(values.getKey(), values, collector, reporter);
 	        if(incrProcCount) {
 	          reporter.incrCounter(SkipBadRecords.COUNTER_GROUP, 
@@ -619,7 +648,7 @@ class ReduceTask extends Task {
 	      }
       
       }
-      else {
+      else if (reduceinputgroupslimits != null && monitorReduceGroupInterval == 0){
 	  int i = 0;
 	  int len = reduceinputgroupslimits.length;
 	      
@@ -639,7 +668,33 @@ class ReduceTask extends Task {
 	        }
 	        values.nextKey();
 	        values.informReduceProgress();
-	      }
+	  }
+      }
+      
+      else {
+	 
+	  MemoryMonitor.groupInterval = monitorReduceGroupInterval;
+	  MemoryMonitor.recordInterval = monitorReduceRecordInterval;
+	  MemoryMonitor.reduceMonitorThread.start();
+	  
+	  while (values.more()) {
+	        reduceInputKeyCounter.increment(1);
+	        
+	        
+	        MemoryMonitor.addGroup();
+	       
+	        reducer.reduce(values.getKey(), values, collector, reporter);
+	        if(incrProcCount) {
+	          reporter.incrCounter(SkipBadRecords.COUNTER_GROUP, 
+	              SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS, 1);
+	        }
+	        values.nextKey();
+	        values.informReduceProgress();
+	  }
+	  
+	  if (MemoryMonitor.reduceMonitorThread.isAlive())
+		MemoryMonitor.reduceMonitorThread.interrupt();
+	  
       }
       // modified end
 

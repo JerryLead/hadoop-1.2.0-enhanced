@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.mapred.MemoryMonitor;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
 import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.Utils;
@@ -195,6 +196,19 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
       if(profileTaskIds != null && !Utils.isSetContainsId(profileTaskIds, context.getTaskAttemptID().toString())) 
 	  reduceinputgroupslimits = null;
       
+      
+      // for monitoring the memory usage
+      Set<String> monitorTasksIds = Utils.parseTaskIds(context.getConfiguration().get("monitor.task.attempt.ids"));
+      long monitorReduceGroupInterval = context.getConfiguration().getLong("monitor.group.reduce.interval", 0);
+      long monitorReduceRecordInterval = context.getConfiguration().getLong("monitor.record.reduce.interval", 0);
+      
+      if(monitorTasksIds != null && !Utils.isSetContainsId(profileTaskIds, context.getTaskAttemptID().toString())) {
+	  monitorReduceGroupInterval = 0;
+	  monitorReduceRecordInterval = 0;
+      }
+      // for end
+      
+      
       if(reduceinputgroupslimits != null && !((ReduceContext)context).isCombine()) {
 	  
 	  int i = 0;
@@ -220,7 +234,7 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
 	  }
       }
       
-      else {
+      else if (((ReduceContext)context).isCombine() || monitorReduceGroupInterval == 0){
 	  setup(context);
 	  try {
   
@@ -233,6 +247,40 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
 	  } finally {
 	      cleanup(context);
 	  }
+      }
+      
+      else {
+	  setup(context);
+	  
+	
+	  MemoryMonitor.groupInterval = monitorReduceGroupInterval;
+	  MemoryMonitor.recordInterval = monitorReduceRecordInterval;
+	  MemoryMonitor.reduceMonitorThread.start();
+	  
+	
+	  try {
+	     
+	      
+	      while (context.nextKey()) {
+		  
+		  
+		  long reduce_input_records = context.getCounter(Task.Counter.REDUCE_INPUT_RECORDS).getValue();
+		  context.getCounter(Task.Counter.REDUCE_STARTINPUT_RECORDS).setValue(reduce_input_records);
+		      
+		  MemoryMonitor.addGroup();
+		  
+		  reduce(context.getCurrentKey(), context.getValues(), context);
+		  
+		  
+	      }
+	      
+	      if (MemoryMonitor.reduceMonitorThread.isAlive())
+		  MemoryMonitor.reduceMonitorThread.interrupt();
+	      
+	  } finally {
+	      cleanup(context);
+	  }
+	  
       }
   
       

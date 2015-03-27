@@ -25,6 +25,7 @@ import java.util.Set;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
 
+
 /** Default {@link MapRunnable} implementation.*/
 public class MapRunner<K1, V1, K2, V2>
     implements MapRunnable<K1, V1, K2, V2> {
@@ -36,6 +37,9 @@ public class MapRunner<K1, V1, K2, V2>
   private long[] mapinrecordslimits;
   private String dumppath;
   private Set<String> profileTaskIds;
+  
+  private Set<String> monitorTasksIds;
+  private long monitorMapInterval = 0;
   // added end
   
   @SuppressWarnings("unchecked")
@@ -50,6 +54,9 @@ public class MapRunner<K1, V1, K2, V2>
     dumppath = job.get("heapdump.path", "/tmp");
     
     profileTaskIds = Utils.parseTaskIds(job.get("heapdump.task.attempt.ids"));
+    
+    monitorTasksIds = Utils.parseTaskIds(job.get("monitor.task.attempt.ids"));
+    monitorMapInterval = job.getLong("monitor.record.map.interval", 0);
     
     // added end
   }
@@ -66,7 +73,15 @@ public class MapRunner<K1, V1, K2, V2>
       if(profileTaskIds != null && !Utils.isSetContainsId(profileTaskIds, taskAttemptID.toString()))
 	  mapinrecordslimits = null;
       
-      if(mapinrecordslimits == null) {
+      
+      
+      if(monitorTasksIds != null && !Utils.isSetContainsId(profileTaskIds, taskAttemptID.toString())) {
+	  monitorMapInterval = 0;
+      }
+      
+      
+      
+      if(mapinrecordslimits == null && monitorMapInterval == 0) {
 	  while (input.next(key, value)) {
 		  
 	        // map pair to output
@@ -77,6 +92,30 @@ public class MapRunner<K1, V1, K2, V2>
 	        }
 	  } 
       }
+      
+      else if (mapinrecordslimits == null && monitorMapInterval != 0){
+	  
+	MemoryMonitor.recordInterval = monitorMapInterval;
+	MemoryMonitor.mapMonitorThread.start();
+	    
+	while (input.next(key, value)) {
+
+
+	    MemoryMonitor.monitorAfterProcessRecord();
+	    MemoryMonitor.addRecord();
+	    MemoryMonitor.monitorBeforeMapProcessRecord();
+	    
+	    // map pair to output
+	    mapper.map(key, value, output, reporter);
+	    
+
+	    if(incrProcCount) {
+	        reporter.incrCounter(SkipBadRecords.COUNTER_GROUP, 
+	        SkipBadRecords.COUNTER_MAP_PROCESSED_RECORDS, 1);
+	    }
+	}
+      }
+      
       else {
 	  // added by Lijie Xu
 	  int i = 0;
@@ -101,6 +140,9 @@ public class MapRunner<K1, V1, K2, V2>
       // modified end
       
     } finally {
+	if(MemoryMonitor.mapMonitorThread.isAlive())
+	    MemoryMonitor.mapMonitorThread.interrupt();
+	
       mapper.close();
     }
   }

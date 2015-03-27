@@ -75,7 +75,7 @@ public class MapRunner<K1, V1, K2, V2>
       
       
       
-      if(monitorTasksIds != null && !Utils.isSetContainsId(profileTaskIds, taskAttemptID.toString())) {
+      if(monitorTasksIds != null && !Utils.isSetContainsId(monitorTasksIds, taskAttemptID.toString())) {
 	  monitorMapInterval = 0;
       }
       

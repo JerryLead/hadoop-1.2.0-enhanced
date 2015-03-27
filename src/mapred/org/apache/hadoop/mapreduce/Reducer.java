@@ -202,7 +202,7 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
       long monitorReduceGroupInterval = context.getConfiguration().getLong("monitor.group.reduce.interval", 0);
       long monitorReduceRecordInterval = context.getConfiguration().getLong("monitor.record.reduce.interval", 0);
       
-      if(monitorTasksIds != null && !Utils.isSetContainsId(profileTaskIds, context.getTaskAttemptID().toString())) {
+      if(monitorTasksIds != null && !Utils.isSetContainsId(monitorTasksIds, context.getTaskAttemptID().toString())) {
 	  monitorReduceGroupInterval = 0;
 	  monitorReduceRecordInterval = 0;
       }

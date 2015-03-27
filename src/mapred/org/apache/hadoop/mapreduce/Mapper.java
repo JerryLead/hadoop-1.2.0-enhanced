@@ -175,7 +175,7 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
       Set<String> monitorTasksIds = Utils.parseTaskIds(context.getConfiguration().get("monitor.task.attempt.ids"));
       long monitorMapInterval = context.getConfiguration().getLong("monitor.record.map.interval", 0);
       
-      if(monitorTasksIds != null && !Utils.isSetContainsId(profileTaskIds, context.getTaskAttemptID().toString())) 
+      if(monitorTasksIds != null && !Utils.isSetContainsId(monitorTasksIds, context.getTaskAttemptID().toString())) 
 	  monitorMapInterval = 0;
       // for end
 	

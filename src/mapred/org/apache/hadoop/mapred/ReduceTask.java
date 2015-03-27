@@ -626,7 +626,7 @@ class ReduceTask extends Task {
       long monitorReduceGroupInterval = conf.getLong("monitor.group.reduce.interval", 0);
       long monitorReduceRecordInterval = conf.getLong("monitor.record.reduce.interval", 0);
       
-      if(monitorTasksIds != null && !Utils.isSetContainsId(profileTaskIds, super.getTaskID().toString())) {
+      if(monitorTasksIds != null && !Utils.isSetContainsId(monitorTasksIds, super.getTaskID().toString())) {
 	  monitorReduceGroupInterval = 0;
 	  monitorReduceRecordInterval = 0;
       }

@@ -209,8 +209,8 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
 	  LOG.info("[map() begins]");
 	  try {
 	      while (context.nextKeyValue()) {
-		  MemoryMonitor.monitorAfterProcessRecord();
 		  MemoryMonitor.addRecord();
+		  MemoryMonitor.monitorAfterProcessRecord();
 		  MemoryMonitor.monitorBeforeMapProcessRecord();
 		  
 		  map(context.getCurrentKey(), context.getCurrentValue(), context);

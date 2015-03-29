@@ -374,8 +374,8 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 	}
 	   
 	if(MemoryMonitor.groupInterval != 0) {
-	    MemoryMonitor.monitorAfterProcessRecord();
 	    MemoryMonitor.addRecord();
+	    MemoryMonitor.monitorAfterProcessRecord();
 	    MemoryMonitor.monitorBeforeReduceProcessRecord();
 	}
     } 

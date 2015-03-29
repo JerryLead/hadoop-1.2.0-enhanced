@@ -311,8 +311,8 @@ class ReduceTask extends Task {
       
      
       if(MemoryMonitor.groupInterval != 0) {
-	  MemoryMonitor.monitorAfterProcessRecord();
 	  MemoryMonitor.addRecord();
+	  MemoryMonitor.monitorAfterProcessRecord();
 	  MemoryMonitor.monitorBeforeReduceProcessRecord();
       }
       

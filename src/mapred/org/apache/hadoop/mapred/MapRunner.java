@@ -100,9 +100,8 @@ public class MapRunner<K1, V1, K2, V2>
 	    
 	while (input.next(key, value)) {
 
-
-	    MemoryMonitor.monitorAfterProcessRecord();
 	    MemoryMonitor.addRecord();
+	    MemoryMonitor.monitorAfterProcessRecord();
 	    MemoryMonitor.monitorBeforeMapProcessRecord();
 	    
 	    // map pair to output

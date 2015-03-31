@@ -274,8 +274,11 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
 		  
 	      }
 	      
+	      
 	      if (MemoryMonitor.reduceMonitorThread.isAlive())
 		  MemoryMonitor.reduceMonitorThread.interrupt();
+	      
+	      MemoryMonitor.printGroupStatistics();
 	      
 	  } finally {
 	      cleanup(context);

@@ -1,5 +1,9 @@
 package org.apache.hadoop.mapred;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 public class MemoryMonitor {
 
     private static Runtime rt = Runtime.getRuntime();
@@ -12,8 +16,6 @@ public class MemoryMonitor {
     private static long lastTotalKB = 0;
     private static long lastUsedKB = 0;
     private static int gcCount = 0;
-    
-
 
     public static boolean notified = false;
 
@@ -22,6 +24,10 @@ public class MemoryMonitor {
 
     private static Object toMonitor = new Object();
     private static Object finished = new Object();
+    private static boolean nextRecord = false;
+
+    private static int[] recordsInGroup = new int[10000];
+    private static int storedGroups = 0;
 
     public static Thread mapMonitorThread = new Thread(new Runnable() {
 
@@ -42,7 +48,7 @@ public class MemoryMonitor {
 		    lastTotalKB = 0;
 		    lastUsedKB = 0;
 
-		    while (r % recordInterval == 1) {
+		    while (nextRecord == false) {
 			monitorMapMaxUsage(false);
 		    }
 		    monitorMapMaxUsage(true);
@@ -76,7 +82,7 @@ public class MemoryMonitor {
 		    lastTotalKB = 0;
 		    lastUsedKB = 0;
 
-		    while (g % recordInterval == 1 && r % recordInterval == 1) {
+		    while (nextRecord == false) {
 			monitorReduceMaxUsage(false);
 		    }
 		    monitorReduceMaxUsage(true);
@@ -91,7 +97,6 @@ public class MemoryMonitor {
 	}
 
     });
-
 
     public static void monitorMap() {
 
@@ -125,8 +130,8 @@ public class MemoryMonitor {
 		    + gcCount);
 
     }
-    
-    public static void monitorReduceMaxUsage(boolean nextRecord) {
+
+    public static void monitorReduceMaxUsage(boolean nextRec) {
 
 	long usedKB = (rt.totalMemory() - rt.freeMemory()) / 1024;
 	long totalKB = (rt.totalMemory()) / 1024;
@@ -136,13 +141,12 @@ public class MemoryMonitor {
 	    lastUsedKB = usedKB;
 	}
 
-	if (nextRecord) {
-	   
-	   System.err.println("group = " + lastGroup + ", record = " + lastRecord + ", total = "
-			    + lastTotalKB + ", used = " + lastUsedKB + ", gcCount = "
-			    + gcCount);
+	if (nextRec) {
+
+	    System.err.println("group = " + lastGroup + ", record = "
+		    + lastRecord + ", total = " + lastTotalKB + ", used = "
+		    + lastUsedKB + ", gcCount = " + gcCount);
 	}
-	   
 
     }
 
@@ -173,8 +177,10 @@ public class MemoryMonitor {
 
 		synchronized (toMonitor) {
 		    lastRecord = r;
+		    nextRecord = false;
 		    toMonitor.notify();
 		    notified = true;
+
 		}
 
 	    } catch (InterruptedException e) {
@@ -195,6 +201,7 @@ public class MemoryMonitor {
 		synchronized (toMonitor) {
 		    lastGroup = g;
 		    lastRecord = r;
+		    nextRecord = false;
 		    toMonitor.notify();
 		    notified = true;
 		}
@@ -207,8 +214,9 @@ public class MemoryMonitor {
     }
 
     public static void monitorAfterProcessRecord() {
-	if (notified == true) {
-	    synchronized (finished) {
+	synchronized (finished) {
+	    nextRecord = true;
+	    if (notified == true) {
 		try {
 		    finished.wait();
 		    notified = false;
@@ -226,10 +234,41 @@ public class MemoryMonitor {
     }
 
     public static void addGroup() {
+	if (g % groupInterval == 1)
+	    System.out.println("gid = " + g + " , records = " + r);
+	if (storedGroups < 10000 && g > 0) {
+	    recordsInGroup[storedGroups] = (int) r;
+	    ++storedGroups;
+	}
+
 	++g;
 	r = 0;
     }
 
+    public static void printGroupStatistics() {
+	List<Integer> statistics = new ArrayList<Integer>();
 
-   
+	long sum = 0;
+
+	for (int i = 0; i < storedGroups; i++) {
+	    statistics.add(recordsInGroup[i]);
+	    sum += recordsInGroup[i];
+	}
+
+	if (storedGroups > 0) {
+	    Collections.sort(statistics);
+
+	    System.out.println("Min = " + statistics.get(0));
+	    System.out.println("Max = " + statistics.get(storedGroups - 1));
+	    System.out.println("Mean = " + sum / storedGroups);
+	    System.out.println("Median = " + statistics.get(storedGroups / 2));
+
+	    if (storedGroups >= 4) {
+		System.out.println("Q1 = " + statistics.get(storedGroups / 4));
+		System.out.println("Q3 = "
+			+ statistics.get(storedGroups - storedGroups / 4 - 1));
+	    }
+	}
+    }
+
 }

@@ -695,6 +695,7 @@ class ReduceTask extends Task {
 	  if (MemoryMonitor.reduceMonitorThread.isAlive())
 		MemoryMonitor.reduceMonitorThread.interrupt();
 	  
+	  MemoryMonitor.printGroupStatistics();
       }
       // modified end
 

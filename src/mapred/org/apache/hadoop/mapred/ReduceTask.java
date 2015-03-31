@@ -701,6 +701,9 @@ class ReduceTask extends Task {
 	  
 	 
       }
+      
+      // GroupStatistics.record(reduceInputKeyCounter.getCounter(), reduceInputValueCounter.getCounter());
+      GroupStatistics.printGroupStatistics();
       // modified end
 
       //Clean up: repeated in catch block below

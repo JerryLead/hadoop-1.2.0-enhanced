@@ -288,6 +288,7 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
 	  
       }
   
+      
       GroupStatistics.printGroupStatistics();
       
    }

@@ -636,6 +636,8 @@ class ReduceTask extends Task {
 	  
       if(reduceinputgroupslimits == null && monitorReduceGroupInterval == 0) {
 	  while (values.more()) {
+	        
+	      	GroupStatistics.record(reduceInputKeyCounter.getCounter(), reduceInputValueCounter.getCounter());
 	        reduceInputKeyCounter.increment(1);
 	       
 	        reducer.reduce(values.getKey(), values, collector, reporter);
@@ -653,6 +655,7 @@ class ReduceTask extends Task {
 	  int len = reduceinputgroupslimits.length;
 	      
 	  while (values.more()) {
+	      	GroupStatistics.record(reduceInputKeyCounter.getCounter(), reduceInputValueCounter.getCounter());
 	        reduceInputKeyCounter.increment(1);
 	        if(i < len && reduceInputKeyCounter.getValue() == reduceinputgroupslimits[i]) {
 	            Utils.heapdump(job.get("heapdump.path", "/tmp"), "redInGroups-" + reduceinputgroupslimits[i]
@@ -678,6 +681,7 @@ class ReduceTask extends Task {
 	  MemoryMonitor.reduceMonitorThread.start();
 	  
 	  while (values.more()) {
+	      	GroupStatistics.record(reduceInputKeyCounter.getCounter(), reduceInputValueCounter.getCounter());
 	        reduceInputKeyCounter.increment(1);
 	        
 	        
@@ -695,7 +699,7 @@ class ReduceTask extends Task {
 	  if (MemoryMonitor.reduceMonitorThread.isAlive())
 		MemoryMonitor.reduceMonitorThread.interrupt();
 	  
-	  MemoryMonitor.printGroupStatistics();
+	 
       }
       // modified end
 

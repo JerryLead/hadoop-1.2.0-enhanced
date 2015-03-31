@@ -32,6 +32,7 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
+import org.apache.hadoop.mapred.GroupStatistics;
 import org.apache.hadoop.mapred.MemoryMonitor;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
 import org.apache.hadoop.mapred.Task;
@@ -170,6 +171,7 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     }
     if (hasMore) {
       if (inputKeyCounter != null) {
+	GroupStatistics.record(inputKeyCounter.getValue(), inputValueCounter.getValue());
         inputKeyCounter.increment(1);
       }
       

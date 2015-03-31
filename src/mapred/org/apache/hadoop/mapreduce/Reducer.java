@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.mapred.GroupStatistics;
 import org.apache.hadoop.mapred.MemoryMonitor;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
 import org.apache.hadoop.mapred.Task;
@@ -228,6 +229,8 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
 		      i++;
 		  }
 		  reduce(context.getCurrentKey(), context.getValues(), context);
+		  
+		 
 	      }
 	  } finally {
 	      cleanup(context);
@@ -278,7 +281,6 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
 	      if (MemoryMonitor.reduceMonitorThread.isAlive())
 		  MemoryMonitor.reduceMonitorThread.interrupt();
 	      
-	      MemoryMonitor.printGroupStatistics();
 	      
 	  } finally {
 	      cleanup(context);
@@ -286,7 +288,7 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
 	  
       }
   
-      
+      GroupStatistics.printGroupStatistics();
       
    }
   

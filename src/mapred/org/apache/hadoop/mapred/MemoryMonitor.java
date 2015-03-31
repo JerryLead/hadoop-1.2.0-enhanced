@@ -1,9 +1,5 @@
 package org.apache.hadoop.mapred;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 public class MemoryMonitor {
 
     private static Runtime rt = Runtime.getRuntime();
@@ -26,8 +22,6 @@ public class MemoryMonitor {
     private static Object finished = new Object();
     private static boolean nextRecord = false;
 
-    private static int[] recordsInGroup = new int[10000];
-    private static int storedGroups = 0;
 
     public static Thread mapMonitorThread = new Thread(new Runnable() {
 
@@ -236,39 +230,11 @@ public class MemoryMonitor {
     public static void addGroup() {
 	if (g % groupInterval == 1)
 	    System.out.println("gid = " + g + " , records = " + r);
-	if (storedGroups < 10000 && g > 0) {
-	    recordsInGroup[storedGroups] = (int) r;
-	    ++storedGroups;
-	}
-
+	
 	++g;
 	r = 0;
     }
 
-    public static void printGroupStatistics() {
-	List<Integer> statistics = new ArrayList<Integer>();
-
-	long sum = 0;
-
-	for (int i = 0; i < storedGroups; i++) {
-	    statistics.add(recordsInGroup[i]);
-	    sum += recordsInGroup[i];
-	}
-
-	if (storedGroups > 0) {
-	    Collections.sort(statistics);
-
-	    System.out.println("Min = " + statistics.get(0));
-	    System.out.println("Max = " + statistics.get(storedGroups - 1));
-	    System.out.println("Mean = " + sum / storedGroups);
-	    System.out.println("Median = " + statistics.get(storedGroups / 2));
-
-	    if (storedGroups >= 4) {
-		System.out.println("Q1 = " + statistics.get(storedGroups / 4));
-		System.out.println("Q3 = "
-			+ statistics.get(storedGroups - storedGroups / 4 - 1));
-	    }
-	}
-    }
+   
 
 }

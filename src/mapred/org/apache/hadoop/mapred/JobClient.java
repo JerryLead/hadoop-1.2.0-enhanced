@@ -1072,7 +1072,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     
     JobSplitWriter.createSplitFiles(jobSubmitDir, conf,
         jobSubmitDir.getFileSystem(conf), sampledSplits);
-    return array.length;
+    return sampledSplits.length;
   }
   
   private int writeSplits(org.apache.hadoop.mapreduce.JobContext job,

@@ -1054,11 +1054,24 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     List<InputSplit> splits = input.getSplits(job);
     T[] array = (T[]) splits.toArray(new InputSplit[splits.size()]);
 
+    // added by Lijie Xu
+    int sampleSplitNum = job.getConfiguration().getInt("my.sample.split.num", array.length);
+    if(sampleSplitNum > array.length)
+	sampleSplitNum = array.length;
+    // added end
+    
     // sort the splits into order based on size, so that the biggest
     // go first
     Arrays.sort(array, new SplitComparator());
+    
+    // added by Lijie Xu
+    InputSplit[] sampledSplits = new InputSplit[sampleSplitNum];
+    for(int i = 0; i < sampleSplitNum; i++)
+	sampledSplits[i] = array[i];
+    // added end
+    
     JobSplitWriter.createSplitFiles(jobSubmitDir, conf,
-        jobSubmitDir.getFileSystem(conf), array);
+        jobSubmitDir.getFileSystem(conf), sampledSplits);
     return array.length;
   }
   
@@ -1080,6 +1093,11 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   throws IOException {
     org.apache.hadoop.mapred.InputSplit[] splits =
     job.getInputFormat().getSplits(job, job.getNumMapTasks());
+    // added by Lijie Xu
+    int sampleSplitNum = job.getInt("my.sample.split.num", splits.length);
+    if(sampleSplitNum > splits.length)
+	sampleSplitNum = splits.length;
+    // added end
     // sort the splits into order based on size, so that the biggest
     // go first
     Arrays.sort(splits, new Comparator<org.apache.hadoop.mapred.InputSplit>() {
@@ -1100,9 +1118,16 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         }
       }
     });
+    
+    // added by Lijie Xu
+    org.apache.hadoop.mapred.InputSplit[] sampledSplits = new org.apache.hadoop.mapred.InputSplit[sampleSplitNum];
+    for(int i = 0; i < sampleSplitNum; i++)
+	sampledSplits[i] = splits[i];
+    
+    // added end
     JobSplitWriter.createSplitFiles(jobSubmitDir, job,
-        jobSubmitDir.getFileSystem(job), splits);
-    return splits.length;
+        jobSubmitDir.getFileSystem(job), sampledSplits);
+    return sampledSplits.length;
   }
   
   private static class SplitComparator implements Comparator<InputSplit> {
